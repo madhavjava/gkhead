@@ -1,0 +1,1377 @@
+<%--
+Copyright (c) 2005-2011 Grameen Foundation USA
+All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied. See the License for the specific language governing
+permissions and limitations under the License.
+
+See also http://www.apache.org/licenses/LICENSE-2.0.html for an
+explanation of the license and how it is applied.
+--%>
+<%@ page
+	import="org.mifos.config.persistence.ConfigurationPersistence"%>
+<%@ page
+	import="org.mifos.accounts.loan.util.helpers.LoanConstants"%>
+
+<%@taglib uri="/tags/struts-html" prefix="html"%>
+<%@taglib uri="/tags/struts-bean" prefix="bean"%>
+<%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<%@taglib uri="/tags/mifos-html" prefix="mifos"%>
+<%@taglib uri="/tags/struts-html-el" prefix="html-el"%>
+<%@ taglib uri="/tags/struts-tiles" prefix="tiles"%>
+<%@ taglib uri="/mifos/customtags" prefix="mifoscustom"%>
+<%@ taglib uri="/loan/loanfunctions" prefix="loanfn"%>
+<%@ taglib uri="/userlocaledate" prefix="userdatefn"%>
+<%@ taglib uri="/mifos/custom-tags" prefix="customtags"%>
+<%@ taglib uri="/sessionaccess" prefix="session"%>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
+<%@ taglib uri="http://www.springframework.org/tags" prefix="spring" %>
+
+<style type="text/css">
+
+    #changeOrder {
+        font-size: 11px;
+        color: #000166;
+        cursor: pointer;
+        text-decoration: underline;
+    }
+    
+   #personalInformation.changing #changeOrder {
+        font-size: 13px;
+        color: green;
+        font-weight: bold;
+    }
+    
+    .changeOrderArrows {
+        display: none;
+    }
+    
+    .changeOrderArrows img {
+        cursor: pointer;
+    }
+    
+    #personalInformation.changing .changeOrderArrows {
+        display: inline;
+    }
+    
+    #personalInformation.changing #personalInformationInner > tbody > tr {
+        cursor: pointer;
+    }
+    
+    #personalInformation.changing #personalInformationInner > tbody > tr:hover {
+        background-color: #FFFFA7;
+    }
+        
+    #personalInformationInner td {
+        padding-top: 2px;
+        padding-bottom: 2px;
+    }
+    
+</style>
+
+<%
+boolean isDisplay = (new ConfigurationPersistence().getConfigurationValueInteger(LoanConstants.ADMINISTRATIVE_DOCUMENT_IS_ENABLED) == 1);
+%>
+     	
+<tiles:insert definition=".clientsacclayoutsearchmenu">
+	<tiles:put name="body" type="string">
+<sec:authorize access="isFullyAuthenticated() and hasRole('ROLE_CAN_DEFINE_HIDDEN_MANDATORY_FIELDS')">
+    <script type="text/javascript">
+    
+    $(document).ready(function() {
+    
+        $("#changeOrder").click(function() {
+            if ($("#personalInformation").hasClass("changing")) {
+                
+                $("#personalInformationInner > tbody").sortable('disable').enableSelection();
+                
+                var order = {};
+                
+                $('#personalInformationInner > tbody > tr').each(function() {
+                    order[$(this).attr("data-order-id")] = $('#personalInformationInner > tbody > tr').index(this);
+                });
+                
+                $.ajax({
+                     contentType: "application/json",
+                        type: "POST",
+                        url: "saveInformationOrder.ftl",
+                        data: JSON.stringify(order),
+                        dataType: "json"
+                });
+                
+                $("#personalInformation").removeClass("changing");
+                $(this).html("<spring:message code="informationOrder.changeFieldsOrder" />");
+            } else {
+                $("#personalInformation").addClass("changing");
+                $(this).html("Save changes");
+                
+                $("#personalInformationInner > tbody").sortable({
+                    helper: function(e, ui) {
+                        ui.children().each(function() {
+                            $(this).width($(this).width());
+                        });
+                        return ui;
+                    }
+                }).disableSelection();
+                $("#personalInformationInner > tbody").sortable("enable");
+            }
+        });
+        
+        $(".moveUp").click(function() {
+            var parentTr = $(this).parents("tr:first"); 
+            parentTr.insertBefore(parentTr.prev());
+        });
+        
+        $(".moveDown").click(function() {
+            var parentTr = $(this).parents("tr:first"); 
+            parentTr.insertAfter(parentTr.next());
+        });
+        
+        $("select.loanAccountAdminDocOutputType").change(function() {
+        	var url = $(this).next("a#loanaccountdetail\\.link\\.viewAdminReport").attr("href");
+        	var paramNameStr = "outputTypeId=";
+        	var outputTypeParamIndex = url.indexOf(paramNameStr) + paramNameStr.length;
+        	var outputTypeParamOldValue = url.substr(outputTypeParamIndex, outputTypeParamIndex + 1);
+        	var outputTypeParamNewValue = $(this).val();
+        	url = url.replace(paramNameStr + outputTypeParamOldValue, paramNameStr + outputTypeParamNewValue);
+        	
+        	$(this).next("a#loanaccountdetail\\.link\\.viewAdminReport").attr("href", url);
+        	
+        	// HTML, as seen in PentahoOutputType.java
+        	if (outputTypeParamNewValue == 3) {
+        		$(this).next("a#loanaccountdetail\\.link\\.viewAdminReport").attr("target", "_blank");
+        	}
+        	else {
+        		$(this).next("a#loanaccountdetail\\.link\\.viewAdminReport").removeAttr("target");
+        	}
+        });
+    });
+    
+    </script>
+
+</sec:authorize>
+
+	<span id="page.id" title="LoanAccountDetail" ></span>
+	
+		<fmt:setLocale value='${sessionScope["org.apache.struts.action.LOCALE"]}'/>
+		<fmt:setBundle basename="org.mifos.config.localizedResources.LoanUIResources"/>
+		
+		<html-el:form method="post" action="/loanAccountAction.do">		
+			<c:set
+				value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'loanaccountownerisagroup')}"
+				var="loanaccountownerisagroup" />
+			<c:set
+				value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'BusinessKey')}"
+				var="loanAccount" />
+			<c:set
+				value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'loanInformationDto')}"
+				var="loanInformationDto" />
+			<c:set
+				value="${loanInformationDto.customerId}"
+				var="customerId" />
+			<c:set
+				value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'accountStateNameLocalised')}"
+				var="accountStateNameLocalised" />
+			<c:set
+				value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'gracePeriodTypeNameLocalised')}"
+				var="gracePeriodTypeNameLocalised" />
+			<c:set
+				value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'interestTypeNameLocalised')}"
+				var="interestTypeNameLocalised" />
+			<c:set
+				value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'accountFlagNamesLocalised')}"
+				var="accountFlagNamesLocalised" />
+            <c:set value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'containsQGForCloseLoan')}"
+			   var="containsQGForCloseLoan" />
+            <c:set value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'questionGroups')}"
+               var="questionGroups" />
+            <c:set value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'personalInformationOrder')}"
+                var="personalInformationOrder" />
+
+			<c:set value="${requestScope.backPageUrl}" var="backPageUrl"/>
+            <c:if test="${ empty requestScope.backPageUrl}">
+            	<c:set value="viewLoanAccountDetails.ftl?globalAccountNum=${loanInformationDto.globalAccountNum}" var="backPageUrl"/>
+            </c:if>
+
+			<html-el:hidden property="currentFlowKey"
+				value="${requestScope.currentFlowKey}" />
+			<table width="95%" border="0" cellpadding="0" cellspacing="0">
+				<tr>
+					<td class="bluetablehead05"><span class="fontnormal8pt">
+					<customtags:headerLink selfLink="false" /> </span></td>
+				</tr>
+			</table>
+			<table width="95%" border="0" cellpadding="0" cellspacing="0">
+				<tr>
+					<td width="70%" align="left" valign="top" class="paddingL15T15">
+					<table width="96%" border="0" cellpadding="3" cellspacing="0">
+						<tr>
+							<td width="62%" class="headingorange"><c:out
+								value="${loanInformationDto.prdOfferingName}" />&nbsp;# <span id="loanaccountdetail.text.loanid"><c:out
+								value="${loanInformationDto.globalAccountNum}" /></span> <br>
+							</td>
+                            <c:choose>
+                            <c:when test="${!loanAccount.groupLoanAccountMember}">
+							<td width="38%" rowspan="2" align="right" valign="top"
+								class="fontnormal"><c:if
+								test="${loanInformationDto.accountStateId != 6 and loanInformationDto.accountStateId != 7 and loanInformationDto.accountStateId !=8 and loanInformationDto.accountStateId !=10}">
+								<html-el:link styleId="loanaccountdetail.link.editAccountStatus"
+									href="editStatusAction.do?method=load&accountId=${loanInformationDto.accountId}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}">
+									<mifos:mifoslabel name="loan.edit_acc_status" />
+								</html-el:link>
+							</c:if><br>
+							</td>
+							</c:when>
+							</c:choose>
+						</tr>
+					</table>
+					<table width="100%" border="0" cellpadding="3" cellspacing="0">
+						<tr>
+							<td><font class="fontnormalRedBold"><span id="loanaccountdetail.error.message"><html-el:errors
+								bundle="loanUIResources" /></span></font></td>
+						</tr>
+					</table>
+					<table width="96%" border="0" cellpadding="0" cellspacing="0">
+						<tr>
+							<td class="fontnormalbold"><span class="fontnormal">
+							<mifoscustom:MifosImage id="${loanInformationDto.accountStateId}"
+								moduleName="org.mifos.accounts.util.resources.accountsImages" /> <span id="loanaccountdetail.text.status"><c:out
+								value="${accountStateNameLocalised}" />&nbsp; 
+								<c:forEach
+								var="flagSet" items="${accountFlagNamesLocalised}">
+								<span class="fontnormal"><c:out
+									value="${flagSet}" /></span>
+							</c:forEach> </span></td>
+						</tr>
+						<tr>
+							<td class="fontnormal"><mifos:mifoslabel
+								name="loan.proposed_date" />: <span id="loanaccountdetail.details.disbursaldate"><c:out
+								value="${userdatefn:getUserLocaleDate(sessionScope.UserContext.preferredLocale,loanInformationDto.disbursementDate)}" /></span>
+							<c:if test="${loanInformationDto.redone}">
+                                        &nbsp(<mifos:mifoslabel
+									name="loan.is_redo_loan" />)
+                                    </c:if></td>
+						</tr>
+						<tr id="Loan.PurposeOfLoan">
+							<td class="fontnormal"><mifos:mifoslabel
+								name="loan.business_work_act" keyhm="Loan.PurposeOfLoan"
+								isManadatoryIndicationNotRequired="yes" /> <mifos:mifoslabel
+								name="${ConfigurationConstants.LOAN}" isColonRequired="yes" />
+							<c:forEach var="busId"
+								items="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'BusinessActivities')}">
+								<c:if test="${busId.id eq loanInformationDto.businessActivityId}">
+									<span id="loanaccountdetail.text.purposeofloan"><c:out value="${busId.name}" /></span>
+								</c:if>
+							</c:forEach></td>
+						</tr>
+					</table>
+					<table width="50%" border="0" cellspacing="0" cellpadding="0">
+						<tr>
+							<td><img src="pages/framework/images/trans.gif" width="10"
+								height="10"></td>
+						</tr>
+					</table>
+					<table width="96%" border="0" cellpadding="3" cellspacing="0">
+						<tr>
+							<td width="33%" class="headingorange"><mifos:mifoslabel
+								name="loan.acc_summary" /></td>
+							<td width="33%" align="right" class="fontnormal">
+								<html-el:link styleId="loanaccountdetail.link.viewRepaymentSchedule"
+									href="viewLoanAccountRepaymentSchedule.ftl?globalAccountNum=${loanInformationDto.globalAccountNum}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}">
+									<mifos:mifoslabel name="loan.view_schd" />
+								</html-el:link>
+							</td>
+						</tr>
+					</table>
+
+					<c:if
+						test="${loanInformationDto.accountStateId == 5 || loanInformationDto.accountStateId == 9}">
+						<table width="96%" border="0" cellpadding="3" cellspacing="0">
+							<tr>
+								<td width="58%" class="fontnormal"><mifos:mifoslabel
+									name="loan.totalAmtDue" /> <c:out
+									value="${userdatefn:getUserLocaleDate(sessionScope.UserContext.preferredLocale,loanInformationDto.nextMeetingDate)}" />:
+								<fmt:formatNumber value="${loanInformationDto.totalAmountDue}" /></td>
+								<%--<span
+										class="fontnormal"><a id="loanaccountdetail.link.viewInstDetails"  href="nextPayment_loanAccount.htm"><mifos:mifoslabel name="loan.view_inst_details" /></a></span><a href="#"><span
+										class="fontnormalbold"> </span></a>--%>
+								<%--<c:if test="${loanInformationDto.accountStateId == 5 || loanInformationDto.accountStateId == 9}">
+									<td width="42%" align="right" class="fontnormal">
+										<span class="fontnormal"><html-el:link styleId="loanaccountdetail.link.viewInstallmentDetails" href="loanAction.do?method=getInstallmentDetails&accountId=${loanInformationDto.accountId}&accountName=${loanInformationDto.prdOfferingName}&globalAccountNum=${loanInformationDto.globalAccountNum}
+																&accountType=${loanInformationDto.accountTypeId}
+																&accountStateId=${loanInformationDto.accountStateId}
+																&recordOfficeId=${loanInformationDto.officeId}
+																&recordLoanOfficerId=${loanInformationDto.personnelId}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}"> 
+											<mifos:mifoslabel name="loan.view_installment_details" /></span>
+										</html-el:link>
+									</td>
+	              				  </c:if>--%>
+							</tr>
+							<tr>
+								<td colspan="2" class="fontnormal"><mifos:mifoslabel
+									name="loan.arrear" />: <fmt:formatNumber
+									value="${loanInformationDto.totalAmountInArrears}" /></td>
+							</tr>
+						</table>
+					</c:if> <c:if
+						test="${loanInformationDto.accountStateId == 5 || loanInformationDto.accountStateId == 9}">
+						<table width="96%" border="0" cellpadding="3" cellspacing="0">
+							<tr>
+								 <c:url value="viewLoanAccountNextInstallmentDetails.ftl" var="viewLoanAccountNextInstallmentDetailsUrl">
+								 	<c:param name="accountId" value="${loanInformationDto.accountId}"/>
+								 	<c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}"/>
+								 	<c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}"/>
+								 	<c:param name="accountType" value="${loanInformationDto.accountTypeId}"/>
+								 	<c:param name="accountStateId" value="${loanInformationDto.accountStateId}"/>
+								 	<c:param name="recordOfficeId" value="${loanInformationDto.officeId}"/>
+								 	<c:param name="recordLoanOfficerId" value="${loanInformationDto.personnelId}"/>
+								 	<c:param name="lastPaymentAction" value="${loanInformationDto.accountId}"/>
+								 	<c:param name="randomNUm" value="${sessionScope.randomNUm}"/>
+								 	<c:param name="currentFlowKey" value="${requestScope.currentFlowKey}"/>
+								 </c:url>
+								<td width="42%" align="right" class="fontnormal"><span
+									class="fontnormal"> <html-el:link styleId="loanaccountdetail.link.viewInstallmentDetails"
+									href="${viewLoanAccountNextInstallmentDetailsUrl}">
+									<mifos:mifoslabel name="loan.view_installment_details" />
+								</html-el:link> </span></td>
+							</tr>
+						</table>
+					</c:if>
+					<table width="96%" border="0" cellpadding="3" cellspacing="0" id="loanSummaryTable">
+						<tr class="drawtablerow">
+							<td width="24%">&nbsp;</td>
+							<td width="20%" align="right" class="drawtablerowboldnoline">
+							<fmt:message key="loan.originalLoan">
+							<fmt:param><mifos:mifoslabel
+								name="${ConfigurationConstants.LOAN}" /></fmt:param>
+							</fmt:message></td>
+							<td width="28%" align="right" class="drawtablerowboldnoline">
+							<mifos:mifoslabel name="loan.amt_paid" /></td>
+							<td width="28%" align="right" class="drawtablerowboldnoline">
+							<fmt:message key="loan.loanBalance">
+							<fmt:param><mifos:mifoslabel
+								name="${ConfigurationConstants.LOAN}" /></fmt:param>
+							</fmt:message></td>
+						</tr>
+						<tr>
+							<td class="drawtablerow"><mifos:mifoslabel
+								name="loan.principal" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.originalPrincipal}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.principalPaid}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.principalDue}" /></td>
+						</tr>
+						<tr>
+							<td class="drawtablerow"><mifos:mifoslabel
+								name="${ConfigurationConstants.INTEREST}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.originalInterest}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.interestPaid}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.interestDue}" /></td>
+						</tr>
+						<tr>
+							<td class="drawtablerow"><mifos:mifoslabel name="loan.fees" /></td>
+							<td align="right" class="drawtablerow" id="LoanAccountDetail.text.loanFees"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.originalFees}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.feesPaid}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.feesDue}" /></td>
+						</tr>
+						<tr>
+							<td class="drawtablerow"><mifos:mifoslabel
+								name="loan.penalty" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.originalPenalty}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.penaltyPaid}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.penaltyDue}" /></td>
+						</tr>
+						<tr>
+							<td class="drawtablerow"><mifos:mifoslabel name="loan.total" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.totalLoanAmnt}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.totalAmntPaid}" /></td>
+							<td align="right" class="drawtablerow"><fmt:formatNumber
+								value="${loanInformationDto.loanSummary.totalAmntDue}" /></td>
+						</tr>
+						<tr>
+							<td colspan="4">&nbsp;</td>
+						</tr>
+					</table>
+					<table width="96%" border="0" cellpadding="3" cellspacing="0">
+						<tr>
+							<td width="35%" class="headingorange"><c:if
+								test="${loanInformationDto.accountStateId == 3 || loanInformationDto.accountStateId == 4 || loanInformationDto.accountStateId == 5
+									 || loanInformationDto.accountStateId == 6 || loanInformationDto.accountStateId == 7 || loanInformationDto.accountStateId == 8 || loanInformationDto.accountStateId == 9}">
+								<mifos:mifoslabel name="loan.recentActivity" />
+							</c:if></td>
+							<c:url value="viewLoanAccountAllActivity.ftl" var="viewLoanAccountAllActivityMethodUrl">
+								<c:param name="accountId" value="${loanInformationDto.accountId}"/>
+								<c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}"/>
+								<c:param name="accountStateId" value="${loanInformationDto.accountStateId}"/>
+								<c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}"/>
+								<c:param name="lastPaymentAction" value="${loanInformationDto.accountId}"/>
+								<c:param name="accountType" value="${loanInformationDto.accountTypeId}"/>
+								<c:param name="randomNUm" value="${sessionScope.randomNUm}"/>
+								<c:param name="currentFlowKey" value="${requestScope.currentFlowKey}"/>
+							</c:url>
+							<td width="65%" align="right" class="fontnormal">&nbsp; <c:if
+								test="${loanInformationDto.loanActivityDetails == true}">
+								<html-el:link styleId="loanaccountdetail.link.viewAccountActivity"
+									href="${viewLoanAccountAllActivityMethodUrl}">
+									<mifos:mifoslabel name="loan.view_acc_activity" />
+								</html-el:link>
+							</c:if></td>
+						</tr>
+					</table>
+					<c:if
+						test="${loanInformationDto.accountStateId == 3 || loanInformationDto.accountStateId == 4 || loanInformationDto.accountStateId == 5
+									 || loanInformationDto.accountStateId == 6 || loanInformationDto.accountStateId == 7 || loanInformationDto.accountStateId == 8 || loanInformationDto.accountStateId == 9}">
+						<mifoscustom:mifostabletag source="recentAccountActivities"
+							scope="session" xmlFileName="RecentAccountActivity.xml"
+							moduleName="org/mifos/accounts/loan/util/resources" passLocale="true" />
+						<table width="96%" border="0" cellpadding="3" cellspacing="0">
+							<tr>
+								<td colspan="3">&nbsp;</td>
+							</tr>
+						</table>
+					</c:if>
+					<table width="96%" border="0" cellpadding="3" cellspacing="0" id="personalInformation">
+						<tr>
+							<td width="69%" class="headingorange"><mifos:mifoslabel
+								name="loan.acc_details" /></td>
+                            <td width="31%" align="right" valign="top" class="fontnormal">
+                            <c:choose>
+                            <c:when test="${!loanAccount.groupLoanAccountMember}">
+							<c:if
+								test="${loanInformationDto.accountStateId != 6 && loanInformationDto.accountStateId != 7 && loanInformationDto.accountStateId !=8 && loanInformationDto.accountStateId !=10}">
+								<html-el:link styleId="loanaccountdetail.link.editAccountInformation"
+									action="loanAccountAction.do?method=manage&customerId=${customerId}&globalAccountNum=${loanInformationDto.globalAccountNum}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}">
+									<mifos:mifoslabel name="loan.edit_acc_info" />
+								</html-el:link>
+                            <br />
+                                
+							</c:if>
+							</c:when>
+							</c:choose>
+                            <sec:authorize access="isFullyAuthenticated() and hasRole('ROLE_CAN_DEFINE_HIDDEN_MANDATORY_FIELDS')">
+                                    <span id="changeOrder"><span id="changeOrder"><spring:message code="informationOrder.changeFieldsOrder" /></span></span>
+                                </sec:authorize>
+                            </td>
+						</tr>
+                        <tr>
+                            <td colspan="2">
+                                <table width="96%" id="personalInformationInner" cellpadding="0" cellspacing="0" class="fontnormal" >
+                                <tbody class="fontnormal">
+                                    <c:forEach items="${personalInformationOrder}" var="personalInformation">
+                                        <c:set var="displayed" value="false" scope="request" />
+                                        <c:choose>
+                                            <c:when test="${personalInformation.name == 'interestRateType'}">
+                                                <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                        <span class="fontnormal">
+                                                     <fmt:message key="loan.interestRateType">
+                                                          <fmt:param><mifos:mifoslabel name="${ConfigurationConstants.INTEREST}" /></fmt:param>
+                                                      </fmt:message>:&nbsp; <c:out
+                                                          value="${interestTypeNameLocalised}" /> 
+                                                    </td>
+                                                    <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'interestRate'}">
+                                             <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                            <fmt:message key="loan.interestRate">
+                                            <fmt:param><mifos:mifoslabel name="${ConfigurationConstants.INTEREST}" /></fmt:param>
+                                        </fmt:message>:&nbsp;<span class="fontnormal"><span id="loanaccountdetail.text.interestRate"><fmt:formatNumber
+                                            value="${loanInformationDto.interestRate}" /></span>%&nbsp;<mifos:mifoslabel
+                                            name="loan.apr" /> </span>
+                                            <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'interestDeductedAtDisbursement'}">
+                                             <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                            <fmt:message key="loan.interestDisbursement">
+                                             <fmt:param><mifos:mifoslabel name="${ConfigurationConstants.INTEREST}" /></fmt:param>
+                                         </fmt:message>:<c:choose>
+                                             <c:when test="${loanInformationDto.interestDeductedAtDisbursement}">
+                                                 <mifos:mifoslabel name="loan.yes" />
+                                             </c:when>
+                                             <c:otherwise>
+                                                 <mifos:mifoslabel name="loan.no" />
+                                             </c:otherwise>
+                                         </c:choose>
+                                         <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'currency'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                            <mifos:mifoslabel name="product.currency" bundle="ProductDefUIResources"/> : <span class ="fontnormal"><span id="loanaccountdetail.text.currency">
+                                                 <c:out value="${loanAccount.currency.currencyCode}"/> </span></span>
+                                                 <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'frequencyOfInstalment'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                   <mifos:mifoslabel name="loan.freq_of_inst" />:&nbsp;
+                                                   <span id="LoanAccountDetail.text.freq_of_inst"><c:out
+                                                       value="${loanInformationDto.recurAfter}"  /> 
+                                                   </span> 
+                                               <c:choose>
+                                                   <c:when
+                                                       test="${loanInformationDto.recurrenceId == '1'}">
+                                                       <mifos:mifoslabel name="loan.week(s)" />
+                                                   </c:when>
+                                                   <c:when
+                                                       test="${loanInformationDto.recurrenceId == '3'}">
+                                                       <mifos:mifoslabel name="loan.day(s)" />
+                                                   </c:when>
+                                                   <c:otherwise>
+                                                       <mifos:mifoslabel name="loan.month(s)" />
+                                                   </c:otherwise>
+                                               </c:choose>
+                                                   <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'principalDueLastInstalment'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                   <mifos:mifoslabel name="loan.principle_due" />:<c:choose>
+                                                   <c:when
+                                                       test="${loanInformationDto.prinDueLastInst == true}">
+                                                       <mifos:mifoslabel name="loan.yes" />
+                                                   </c:when>
+                                                   <c:otherwise>
+                                                       <mifos:mifoslabel name="loan.no" />
+                                                   </c:otherwise>
+                                               </c:choose>
+                                               <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'gracePeriodType'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                   <mifos:mifoslabel name="loan.grace_period_type" />:&nbsp; <c:out
+                                                   value="${gracePeriodTypeNameLocalised}" />
+                                                    <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'noOfInstalments'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                   <mifos:mifoslabel name="loan.no_of_inst" />:&nbsp;<span id="loanaccountdetail.text.noOfInst"><fmt:formatNumber
+                                                value="${loanInformationDto.noOfInstallments}" /></span> <mifos:mifoslabel
+                                                name="loan.allowed_no_of_inst" />&nbsp;<fmt:formatNumber
+                                                value="${loanInformationDto.minNoOfInstall}" />
+                                            -&nbsp;<fmt:formatNumber
+                                                value="${loanInformationDto.maxNoOfInstall}" />)
+                                            <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'gracePeriodDuration'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                   <mifos:mifoslabel name="loan.grace_period" />:&nbsp;<fmt:formatNumber
+                                                   value="${loanInformationDto.gracePeriodDuration}" />&nbsp;<mifos:mifoslabel
+                                                   name="loan.inst" />
+                                            <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'additional'}">
+                                                <c:forEach items="${questionGroups}" var="questionGroup">
+                                                    <c:forEach items="${questionGroup.questionGroupDetail.sectionDetails}" var="sectionDetails">
+                                                            <c:forEach items="${sectionDetails.questions}" var="question">
+                                                                <c:if test="${question.showOnPage && question.id == personalInformation.additionalQuestionId && not displayed}">
+                                                                    <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                                        <td>
+                                                                            <c:out value="${question.text}" />: <c:out value="${question.value}" />
+                                                                        </td>
+                                                                        <c:set var="displayed" value="true" scope="request" />
+                                                                </c:if>
+                                                            </c:forEach>
+                                                        </c:forEach>
+                                                </c:forEach>          
+                                            </c:when>
+                                             <c:when test="${personalInformation.name == 'sourceOfFund'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                   <mifos:mifoslabel name="loan.source_fund" />:&nbsp; <c:out
+                                                  value="${loanInformationDto.fundName}" />
+                                            <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'collateral'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                            <table width="96%" border="0" cellpadding="0" cellspacing="0">
+                                              <tr id="collateral">
+                                                  <td class="fontnormal"><br>
+                                                  <span class="fontnormalbold"><mifos:mifoslabel
+                                                      name="loan.collateralDetails" /></span></td>
+                                              </tr>
+                                              <tr id="Loan.CollateralType">
+                                                  <td class="fontnormal"><mifos:mifoslabel
+                                                      name="loan.collateral_type" keyhm="Loan.CollateralType"
+                                                      isColonRequired="yes" isManadatoryIndicationNotRequired="yes" />&nbsp;
+                                                  <c:forEach items="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'CollateralTypes')}" var="collateralType">
+                                                      <c:if test="${collateralType.id eq loanInformationDto.collateralTypeId}">
+                                                          <span id="loanaccountdetail.text.collateraltype"><c:out value="${collateralType.name}" /></span>
+                                                      </c:if>
+                                                  </c:forEach></td>
+                                              </tr>
+                                              <tr id="Loan.CollateralNotes">
+                                                  <td class="fontnormal">
+                                                  <mifos:mifoslabel name="loan.collateral_notes"
+                                                      keyhm="Loan.CollateralNotes" isColonRequired="yes"
+                                                      isManadatoryIndicationNotRequired="yes" />&nbsp;<br>
+                                                  <span id="loanaccountdetail.text.collateralnote"><c:out value="${loanInformationDto.collateralNote}" /></span>
+                                                  <br /></td>
+                                              </tr>
+                                              <script>
+                                                  if(document.getElementById("Loan.CollateralType").style.display=="none" &&
+                                                      document.getElementById("Loan.CollateralNotes").style.display=="none")
+                                                          document.getElementById("collateral").style.display="none";
+                                              </script>
+                                          </table>
+                                            <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                             <c:when test="${personalInformation.name == 'externalId'}">
+                                            <tr id="Loan.ExternalId" data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                  <mifos:mifoslabel name="accounts.externalId"
+                                                      keyhm="Loan.ExternalId" isColonRequired="yes" isManadatoryIndicationNotRequired="yes" />
+                                                  &nbsp; <span class="fontnormal"><span id="loanaccountdetail.text.externalid"><c:out value="${loanInformationDto.externalId}" /></span> </span>
+                                            
+                                               <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            <c:when test="${personalInformation.name == 'newGlimAccounts'}">
+                                            
+                                                <c:set value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'loanAccountDetailsView')}"
+                                                   var="loanAccountDetailsView" />
+                                                       <c:if test="${loanInformationDto.group == true || loanInformationDto.groupLoanWithMembersEnabled == true}">
+                                                           <c:if test="${loanAccountDetailsView != null}">
+                                                           <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                                <td colspan="3"><br />
+                                                               <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                                                                   <tr>
+                                                                       <td valign="top">
+                                                                      <c:choose>
+                                                                           <c:when test="${loanInformationDto.groupLoanWithMembersEnabled == true}">
+                                                                               <c:choose>
+                                                                                   <c:when test="${loanInformationDto.disbursed == true}">
+                                                                                       <mifoscustom:mifostabletag source="loanAccountDetailsView" scope="session"
+                                                                                         xmlFileName="GroupLoanAccountDetails.xml" moduleName="org/mifos/accounts/loan/util/resources"
+                                                                                         passLocale="true" randomNUm="${sessionScope.randomNUm}"
+                                                                                         currentFlowKey="${requestScope.currentFlowKey}" />
+                                                                                   </c:when>
+                                                                                   <c:otherwise>
+                                                                                       <mifoscustom:mifostabletag source="loanAccountDetailsView" scope="session"
+                                                                                         xmlFileName="GroupLoanAccountDetails.xml" moduleName="org/mifos/accounts/loan/util/resources"
+                                                                                         passLocale="true"/>
+                                                                                   </c:otherwise>
+                                                                               </c:choose>
+                                                                           </c:when>
+                                                                           <c:otherwise>
+                                                                               <c:choose>
+                                                                                   <c:when test="${loanInformationDto.disbursed == true}">
+                                                                                       <mifoscustom:mifostabletag source="loanAccountDetailsView" scope="session"
+                                                                                         xmlFileName="LoanAccountDetails.xml" moduleName="org/mifos/accounts/loan/util/resources"
+                                                                                         passLocale="true" randomNUm="${sessionScope.randomNUm}"
+                                                                                         currentFlowKey="${requestScope.currentFlowKey}" />
+                                                                                   </c:when>
+                                                                                   <c:otherwise>
+                                                                                       <mifoscustom:mifostabletag source="loanAccountDetailsView" scope="session"
+                                                                                         xmlFileName="LoanAccountDetails.xml" moduleName="org/mifos/accounts/loan/util/resources"
+                                                                                         passLocale="true"/>
+                                                                                   </c:otherwise>
+                                                                               </c:choose>
+                                                                           </c:otherwise>
+                                                                       </c:choose>
+                                                                       </td>
+                                                                   </tr>
+                                                               </table>
+                                                               
+                                                              </td>
+                                                              </tr> 
+                                                           </c:if>
+                                                       </c:if> <!--  -->
+                                            </c:when>
+                                             <c:when test="${personalInformation.name == 'adminDocs'}">
+                                              <%
+                                             if(isDisplay) {
+                                            %>
+                                            <tr id="Loan.ExternalId" data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td><br />
+                                           
+                                           
+                                                 <span class="fontnormalbold"> 
+                                                <mifos:mifoslabel
+                                                    name="reports.administrativedocuments" /> 
+                                                    <br></span>
+                                                <c:forEach var="adminDoc"
+                                                    items="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'administrativeDocumentsList')}">
+                        
+                                                        <c:forEach var="adminDocMixed" items="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'administrativeDocumentsAccStateMixList')}">
+                                                                    <c:if test="${adminDocMixed.adminDocumentID.admindocId==adminDoc.admindocId}">
+                                                                        <c:if test="${adminDocMixed.accountStateID.id==loanInformationDto.accountStateId}">
+                                                                        <span class="fontnormal"> 
+                                                              <label for="adminDocOutputType_${adminDoc.admindocId}">${adminDoc.adminDocumentName}</label>
+                                                              <select id="adminDocOutputType_${adminDoc.admindocId}" class="adminDocOutputType">
+                                                                <option value="0" selected="selected">PDF</option>
+                                                                <option value="1">XLS</option>
+                                                                <option value="2">RTF</option>
+                                                                <option value="3">HTML</option>
+                                                                <option value="4">XML</option>
+                                                                <option value="5">CSV</option>
+                                                              </select>
+                                                              
+                                                              <html-el:link styleClass="adminDocOutputTypeLink" styleId="loanaccountdetail.link.viewAdminReport"
+                                                                href="executeAdminDocument.ftl?adminDocumentId=${adminDoc.admindocId}&entityId=${loanInformationDto.globalAccountNum}&outputTypeId=0">
+                                                                 <c:out value="Download" />
+                                                              </html-el:link>
+                                                                        </span>
+                                                                        <br>
+                                                                        </c:if>
+                                                                    </c:if>
+                                                        </c:forEach>
+                        
+                                                </c:forEach>
+                                                                                                
+                                          
+                                            <br />
+                                           <script type="text/javascript" src="pages/application/admindocument/js/adminDocument.js"></script>
+                                           <script type="text/javascript">syncAdminDocumentLinkWithComboBox("adminDocOutputType", "adminDocOutputTypeLink");</script>
+                                           <c:set var="displayed" value="true" scope="request" />
+                                             <%
+                                            }
+                                            %>  
+                                            </c:when>
+                                             <c:when test="${personalInformation.name == 'reccuringFees'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td><br />
+                                                      <span class="fontnormalbold"> <mifos:mifoslabel name="loan.recurring_acc_fees" /><br>
+                                                </span> <c:forEach items="${loanInformationDto.accountFees}" var="feesSet" varStatus="status">
+                                                    <c:if
+                                                        test="${feesSet.feeFrequencyTypeId == '1' && feesSet.feeStatus != '2'}">
+                                                    <span id="loanAccountDetail.text.periodicFeeName_<fmt:formatNumber value="${status.count}"/>">
+                                                        <c:out value="${feesSet.feeName}" /></span>:
+                                                            <span class="fontnormal"> <fmt:formatNumber
+                                                            value="${feesSet.accountFeeAmount}" />&nbsp;( <mifos:mifoslabel
+                                                            name="loan.periodicityTypeRate" /> <c:out
+                                                            value="${feesSet.meetingRecurrence}" />)
+                                                            <c:if test="${!loanAccount.groupLoanAccountMember}">
+                                                                <html-el:link styleId="loanAccountDetail.link.removePeriodicFee_${status.count}"
+                                                                    href="accountAppAction.do?method=removeFees&feeId=${feesSet.feeId}&globalAccountNum=${loanInformationDto.globalAccountNum}&accountId=${loanInformationDto.accountId}&recordOfficeId=${loanInformationDto.officeId}&recordLoanOfficerId=${loanInformationDto.personnelId}&createdDate=${loanInformationDto.createdDate}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}&input=Loan">
+                                                                    <mifos:mifoslabel name="loan.remove" />
+                                                                </html-el:link> 
+                                                            </c:if>
+                                                            <br>
+                                                        </span>
+                                                    </c:if>
+                                                </c:forEach>
+                                              <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                                <c:when test="${personalInformation.name == 'oneTimeFees'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td><br />
+                                                   <span class="fontnormalbold"> <mifos:mifoslabel  name="loan.one_time_acc_fees" /><br>
+                                               </span> <c:forEach items="${loanInformationDto.accountFees}" var="feesSet" varStatus="status">
+                                                   <c:if
+                                                       test="${feesSet.feeFrequencyTypeId == '2' && feesSet.feeStatus != '2'}">
+                                                       <span id="loanAccountDetail.text.oneTimeFeeName_<fmt:formatNumber value="${status.count}"/>">
+                                                           <c:out value="${feesSet.feeName}"/></span>:
+                                                           <span class="fontnormal"> <fmt:formatNumber
+                                                           value="${feesSet.accountFeeAmount}" />&nbsp;
+                                                           <!-- if account state is LOAN_PARTIAL_APPLICATION or LOAN_PENDING_APPROVAL then enable removal -->
+                                                       <c:if test="${loanInformationDto.accountStateId == '1' || loanInformationDto.accountStateId == '2'}">
+                                                           <c:if test="${!loanAccount.groupLoanAccountMember}">                    
+                                                               <html-el:link styleId="loanAccountDetail.link.removeOneTimeFee_${status.count}"
+                                                               href="accountAppAction.do?method=removeFees&feeId=${feesSet.feeId}&globalAccountNum=${loanInformationDto.globalAccountNum}&accountId=${loanInformationDto.accountId}&recordOfficeId=${loanInformationDto.officeId}&recordLoanOfficerId=${loanInformationDto.personnelId}&createdDate=${loanInformationDto.createdDate}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}&input=Loan">
+                                                               <mifos:mifoslabel name="loan.remove" />
+                                                               </html-el:link>
+                                                           </c:if> 
+                                                       </c:if> <br>
+                                                       </span>
+                                                   </c:if>
+                                               </c:forEach>
+                                                   <br>
+                                              <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                              <c:when test="${personalInformation.name == 'reccuringPenalties'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td><br />
+                                                    <span class="fontnormalbold">
+                                                  <mifos:mifoslabel name="loan.recurring_acc_penalties" />
+                                                  <br>
+                                              </span>
+                                              <c:forEach items="${loanInformationDto.accountPenalties}" var="penaltySet" varStatus="status">
+                                                  <c:if test="${penaltySet.penaltyFrequencyId != '1' && penaltySet.penaltyStatus != '2'}">
+                                                      <span id="loanAccountDetail.text.periodicPenaltyName_<fmt:formatNumber value="${status.count}"/>">
+                                                          <c:out value="${penaltySet.penaltyName}"/>
+                                                      </span>:
+                                                      <span class="fontnormal">
+                                                          <fmt:formatNumber value="${penaltySet.accountPenaltyAmount}" />&nbsp;
+                                                          (<c:out value="${penaltySet.penaltyFrequencyName}"/>) &nbsp;
+                                                          <c:if test="${!loanAccount.groupLoanAccountMember}">
+                                                              <html-el:link styleId="loanAccountDetail.link.removePenalty_${status.count}"
+                                                                  href="accountAppAction.do?method=removePenalties&penaltyId=${penaltySet.penaltyId}&globalAccountNum=${loanInformationDto.globalAccountNum}&accountId=${loanInformationDto.accountId}&recordOfficeId=${loanInformationDto.officeId}&recordLoanOfficerId=${loanInformationDto.personnelId}&createdDate=${loanInformationDto.createdDate}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}&input=Loan">
+                                                                  <mifos:mifoslabel name="loan.remove" />
+                                                              </html-el:link> 
+                                                          </c:if>
+                                                          <br>
+                                                      </span>
+                                                  </c:if>
+                                              </c:forEach>
+                                                     <br />
+                                              <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                            
+                                             <c:when test="${personalInformation.name == 'oneTimePenalties'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td><br />
+                                                <span class="fontnormalbold">
+                                                 <mifos:mifoslabel name="loan.one_time_acc_penalties" />
+                                                 <br>
+                                             </span>
+                                             <c:forEach items="${loanInformationDto.accountPenalties}" var="penaltySet" varStatus="status">
+                                                 <c:if test="${penaltySet.penaltyFrequencyId == '1' && penaltySet.penaltyStatus != '2'}">
+                                                     <span id="loanAccountDetail.text.oneTimePenaltyName_<fmt:formatNumber value="${status.count}"/>">
+                                                         <c:out value="${penaltySet.penaltyName}"/>
+                                                     </span>:
+                                                     <span class="fontnormal">
+                                                         <fmt:formatNumber value="${penaltySet.accountPenaltyAmount}" />&nbsp;
+                                                         <!-- if account state is LOAN_PARTIAL_APPLICATION or LOAN_PENDING_APPROVAL then enable removal -->
+                                                         <c:if test="${loanInformationDto.accountStateId == '1' || loanInformationDto.accountStateId == '2'}">
+                                                             <c:if test="${!loanAccount.groupLoanAccountMember}">
+                                                                 <html-el:link styleId="loanAccountDetail.link.removeOneTimePenalty_${status.count}"
+                                                                     href="accountAppAction.do?method=removePenalties&penaltyId=${penaltySet.penaltyId}&globalAccountNum=${loanInformationDto.globalAccountNum}&accountId=${loanInformationDto.accountId}&recordOfficeId=${loanInformationDto.officeId}&recordLoanOfficerId=${loanInformationDto.personnelId}&createdDate=${loanInformationDto.createdDate}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}&input=Loan">
+                                                                     <mifos:mifoslabel name="loan.remove" />
+                                                                 </html-el:link> 
+                                                             </c:if>
+                                                         </c:if>
+                                                     </span>
+                                                 </c:if>
+                                             </c:forEach>
+                                                     <br />
+                                              <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                             <c:when test="${personalInformation.name == 'guaranties'}">
+                                            <tr data-order-id="<c:out value="${personalInformation.id}" />">
+                                                   <td>
+                                                   <c:if test="${loanInformationDto.accountTypeId== 1 || loanInformationDto.accountTypeId == 4 || 
+                        (loanInformationDto.accountTypeId==5 && !loanInformationDto.group)}">
+                        <table width="96%" border="0" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td width="50%" height="23" class="fontnormalbold">
+                                    <mifos:mifoslabel name="client.GuaranteeInfoHeading" bundle="ClientUIResources"></mifos:mifoslabel>
+                                </td></br>
+                                <c:if test="${loanInformationDto.accountStateId==5 || loanInformationDto.accountStateId==9
+                                            || loanInformationDto.accountStateId==2 || loanInformationDto.accountStateId==3}">
+                                    <c:url value="linkGuarantor.ftl" var="applyGuarantyUrl">
+                                        <c:param name="currentFlowKey" value="${requestScope.currentFlowKey}"/>
+                                        <c:param name="globalCustNum" value="${loanInformationDto.globalCustNum}"/>
+                                        <c:param name="accountId" value="${loanInformationDto.accountId}"/>
+                                        <c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}"/>
+                                        <c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}"/>
+                                        <c:param name="backPageUrl" value="${backPageUrl}" />
+                                    </c:url>
+                                    <td width="50%" align="right" class="fontnormal"> 
+                                        <html-el:link styleId="loanaccountdetail.link.applyGuaranty"href="${applyGuarantyUrl}">
+                                            <mifos:mifoslabel name="loan.applyGuarantorLink" bundle="loanUIResources"></mifos:mifoslabel>
+                                        </html-el:link>
+                                    </td>
+                               </c:if>
+                            </tr>
+                        </table>
+                        <mifoscustom:mifostabletag source="guarantyInformation"
+                        scope="session" xmlFileName="GuarantyInformation.xml"moduleName="org/mifos/accounts/loan/util/resources" 
+                        passLocale="true" globalAccountNum="${loanInformationDto.globalAccountNum}"
+                        accountId="${loanInformationDto.accountId}" randomNUm="${sessionScope.randomNUm}" currentFlowKey="${requestScope.currentFlowKey}"/>
+                    </c:if>
+                                                    <c:set var="displayed" value="true" scope="request" />
+                                            </c:when>
+                                         </c:choose>
+                                         <c:if test="${displayed}">
+                                            </td>
+                                            <td>
+                                               <sec:authorize access="isFullyAuthenticated() and hasRole('ROLE_CAN_DEFINE_HIDDEN_MANDATORY_FIELDS')">
+                                                   <span class="changeOrderArrows">
+                                                       <img class="moveUp" src="pages/framework/images/smallarrowtop.gif" />&nbsp;
+                                                       <img class="moveDown" src="pages/framework/images/smallarrowdown.gif" />
+                                                   </span>
+                                               </sec:authorize>
+                                            </td>
+                                            </tr>
+                                        </c:if>
+                                    </c:forEach>
+                                </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        					
+					</table>
+
+					<table width="96%" border="0" cellpadding="3" cellspacing="0">
+						<tr>
+							<td width="66%" class="headingorange"><mifos:mifoslabel
+								name="loan.more_details" /></td>
+						</tr>
+						<tr>
+							<td class="fontnormal"><%--
+									<html-el:link styleId="loanaccountdetail.link.viewTransactionHistory"  href="transaction_history_loanAccount.htm"> <mifos:mifoslabel name="loan.view_transc_history" />
+									</html-el:link><br>--%> 
+									<span class="fontnormal">
+                                        <c:url value="viewLoanAccountPayments.ftl" var="viewLoanAccountPaymentsUrl" >
+                                            <c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+                                        </c:url >
+                                        <a id="loanaccountdetail.link.accountpayments" href="${viewLoanAccountPaymentsUrl}">
+                                            <mifos:mifoslabel name="loan.ViewLoanAccountPaymentsLink" />
+                                        </a> <br/>
+                                        <c:set var="questionnaireFor" scope="session" value="${loanInformationDto.prdOfferingName}"/>
+                                        <c:remove var="urlMap" />
+                                        <jsp:useBean id="urlMap" class="java.util.LinkedHashMap"  type="java.util.HashMap" scope="session"/>
+                                        <c:set target="${urlMap}" property="${loanInformationDto.officeName}" value="custSearchAction.do?method=getOfficeHomePage&officeId=${loanInformationDto.officeId}"/>
+                                        <c:set target="${urlMap}" property="${loanInformationDto.customerName}" value="clientCustAction.do?method=get&globalCustNum=${loanInformationDto.globalCustNum}"/>
+                                        <c:set target="${urlMap}" property="${loanInformationDto.prdOfferingName}" value="viewLoanAccountDetails.ftl?globalAccountNum=${loanInformationDto.globalAccountNum}"/>
+                                        <c:choose>
+                                        <c:when test="${!loanAccount.groupLoanAccountMember}">
+                                        <c:url value="viewAndEditQuestionnaire.ftl" var="viewAndEditQuestionnaireMethodUrl" >
+                                            <c:param name="creatorId" value="${sessionScope.UserContext.id}" />
+                                            <c:param name="entityId" value="${loanInformationDto.accountId}" />
+                                            <c:param name="event" value="Create" />
+                                            <c:param name="source" value="Loan" />
+                                            <c:param name="backPageUrl" value="${backPageUrl}" />
+                                        </c:url >
+                                        <a id="loanaccountdetail.link.questionGroups" href="${viewAndEditQuestionnaireMethodUrl}">
+                                            <mifos:mifoslabel name="client.ViewQuestionGroupResponsesLink" bundle="ClientUIResources" />
+                                        </a> <br/>
+                                        </c:when>
+                                        </c:choose>
+                                           <c:url value="viewAndEditQuestionnaire.ftl" var="viewAndEditQuestionnaireForClosedLoanResponsesLinkMethodUrl" >
+                                            <c:param name="creatorId" value="${sessionScope.UserContext.id}" />
+                                            <c:param name="entityId" value="${loanInformationDto.accountId}" />
+                                            <c:param name="event" value="Close" />
+                                            <c:param name="source" value="Loan" />
+                                           </c:url >
+                                        <c:if test="${containsQGForCloseLoan}">
+                                            <a id="loanaccountdetail.link.questionGroupsClose" href="${viewAndEditQuestionnaireForClosedLoanResponsesLinkMethodUrl}&backPageUrl=${backPageUrl}">
+                                            <mifos:mifoslabel name="loan.ViewQuestionGroupForClosedLoanResponsesLink" />
+                                            </a> <br>
+                                        </c:if>
+                                        <c:url value="viewUploadedFiles.ftl" var="viewUploadedFiles" >
+                                            <c:param name="entityId" value="${loanInformationDto.accountId}" />
+                                            <c:param name="entityType" value="LOAN" />
+                                            <c:param name="backPageUrl" value="${backPageUrl}" />
+                                        </c:url>
+                                        <a id="viewClientDetails.link.uploadedFiles" href="${viewUploadedFiles}" >
+                                            <mifos:mifoslabel name="client.UploadedFilesLink" bundle="ClientUIResources" />
+                                        </a><br/>
+									    <html-el:link styleId="loanaccountdetail.link.viewStatusHistory"
+								          href="loanAccountAction.do?method=viewStatusHistory&globalAccountNum=${loanInformationDto.globalAccountNum}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}">
+								          <mifos:mifoslabel name="loan.view_status_history" />
+							            </html-el:link>
+							            <br>
+										<html-el:link styleId="loanaccountdetail.link.viewChangeLog"
+											href="loanAccountAction.do?method=loadChangeLog&entityType=Loan&entityId=${loanInformationDto.accountId}&currentFlowKey=${requestScope.currentFlowKey}">
+											<mifos:mifoslabel name="loan.view_change_log" />
+										</html-el:link>
+										<br>
+										<html-el:link styleId="loanaccountdetail.link.viewTransactionHistory"
+											href="viewLoanAccountTransactionHistory.ftl?globalAccountNum=${loanInformationDto.globalAccountNum}&accountId=${loanInformationDto.accountId}&prdOfferingName=${loanInformationDto.prdOfferingName}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}">
+ 											<mifos:mifoslabel name="Center.TransactionHistory" />
+										</html-el:link> 
+									</span>
+							</td>
+						</tr>
+					</table>
+					</td>
+					<td width="30%" align="left" valign="top" class="paddingleft1">
+					<c:if test="${!(loanInformationDto.accountStateId =='6' && loanAccount.groupLoanAccountMember)}">
+					<table width="100%" border="0" cellpadding="2" cellspacing="0"
+						class="orangetableborder">
+						<tr>
+							<td class="orangetablehead05"><span class="fontnormalbold"><mifos:mifoslabel
+								name="loan.trxn" /></span></td>
+						</tr>
+						<tr>
+							<td class="paddingL10">
+							<c:choose>
+								<c:when
+									test="${loanInformationDto.accountStateId=='5' ||loanInformationDto.accountStateId=='6' || loanInformationDto.accountStateId=='7' || loanInformationDto.accountStateId=='8' || loanInformationDto.accountStateId=='9'}">
+									<span class="fontnormal8pt"> <c:if
+										test="${(loanInformationDto.accountStateId=='5' || loanInformationDto.accountStateId=='9')}">
+										<c:url value="applyPaymentAction.do" var="applyPaymentActionMethodUrl" >
+											<c:param name="method" value="load" />
+											<c:param name="input" value="loan" />
+											<c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}" />
+											<c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+											<c:param name="accountId" value="${loanInformationDto.accountId}" />
+											<c:param name="accountType" value="${loanInformationDto.accountTypeId}" />
+											<c:param name="recordOfficeId" value="${loanInformationDto.officeId}" />
+											<c:param name="recordLoanOfficerId" value="${loanInformationDto.personnelId}" />
+											<c:param name="randomNUm" value="${sessionScope.randomNUm}" />
+											<c:param name="currentFlowKey" value="${requestScope.currentFlowKey}" />
+											</c:url >
+                                         <c:url value="applyGroupPaymentAction.do" var="applyGroupPaymentActionMethodUrl" >
+                                                <c:param name="method" value="load" />
+                                                <c:param name="input" value="loan" />
+                                                <c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}" />
+                                                <c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+                                                <c:param name="accountId" value="${loanInformationDto.accountId}" />
+                                                <c:param name="accountType" value="${loanInformationDto.accountTypeId}" />
+                                                <c:param name="recordOfficeId" value="${loanInformationDto.officeId}" />
+                                                <c:param name="recordLoanOfficerId" value="${loanInformationDto.personnelId}" />
+                                                <c:param name="randomNUm" value="${sessionScope.randomNUm}" />
+                                                <c:param name="currentFlowKey" value="${requestScope.currentFlowKey}" />
+                                                </c:url >
+                                        <c:choose>
+                                          <c:when test="${loanAccount.parentGroupLoanAccount || loanAccount.groupLoanAccountMember }">
+                                            <html-el:link styleId="loanaccountdetail.link.applyPayment"
+                                                href="${applyGroupPaymentActionMethodUrl}">
+                                                <mifos:mifoslabel name="loan.apply_payment" />
+                                            </html-el:link>
+                                          </c:when>
+                                          <c:otherwise>
+                                            <html-el:link styleId="loanaccountdetail.link.applyPayment"
+                                                href="${applyPaymentActionMethodUrl}">
+                                                <mifos:mifoslabel name="loan.apply_payment" />
+                                            </html-el:link>
+                                          </c:otherwise>
+                                        </c:choose>
+                                        <c:if test="${loanInformationDto.interestType == 2 || loanInformationDto.interestType == 4}">
+        									<c:url value="customLoanRepayment.ftl" var="customLoanRepaymentMethodUrl" >
+        										<c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+        									</c:url >
+        									<br/>
+        									<html-el:link styleId="loanaccountdetail.link.applyPrincipalPrePayment"
+                                                href="${customLoanRepaymentMethodUrl}">
+                                                    <mifos:mifoslabel name="loan.apply_prepayment" />
+                                                </html-el:link>
+                                        </c:if>
+                                        <br/>
+									</c:if> 
+									<c:if test="${loanInformationDto.accountStateId!='6' && loanInformationDto.accountStateId!='7' && !loanAccount.groupLoanAccountMember}">
+										<html-el:link styleId="loanaccountdetail.link.applyCharges"
+											href="applyChargeAction.do?method=load&accountId=${loanInformationDto.accountId}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}">
+											<mifos:mifoslabel name="loan.apply_charges" />
+										</html-el:link>
+										<br>
+									</c:if>
+													<c:url value="applyAdjustment.do" var="applyAdjustmentLoadAdjustmentWhenObligationMetMethodUrl" >
+														<c:param name="method" value="loadAdjustmentWhenObligationMet" />
+														<c:param name="accountId" value="${loanInformationDto.accountId}" />
+														<c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+														<c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}" />
+														<c:param name="randomNUm" value="${sessionScope.randomNUm}" />
+														<c:param name="currentFlowKey" value="${requestScope.currentFlowKey}" />
+													</c:url >
+													<c:url value="applyAdjustment.do" var="applyAdjustmentLoadAdjustmentMethodUrl" >
+														<c:param name="method" value="listPossibleAdjustments" />
+														<c:param name="accountId" value="${loanInformationDto.accountId}" />
+														<c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+														<c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}" />
+														<c:param name="randomNUm" value="${sessionScope.randomNUm}" />
+														<c:param name="currentFlowKey" value="${requestScope.currentFlowKey}" />
+													</c:url >
+									<c:choose>
+
+										<c:when
+											test="${(loanInformationDto.accountStateId=='5' || loanInformationDto.accountStateId=='9' || (loanInformationDto.accountStateId=='6' && !loanAccount.groupLoanAccountMember)) }">
+                                            <html-el:link styleId="loanaccountdetail.link.applyAdjustment"
+                                                href="${applyAdjustmentLoadAdjustmentMethodUrl}">
+                                                <mifos:mifoslabel name="loan.apply_adjustment" />
+                                            </html-el:link>
+											<br>
+										</c:when>
+									</c:choose> </span>
+
+
+								</c:when>
+							</c:choose> <c:choose>
+								<c:when
+									test="${loanInformationDto.accountStateId=='1' || loanInformationDto.accountStateId=='2' || loanInformationDto.accountStateId=='3' || loanInformationDto.accountStateId=='4'}">
+									<c:if test="${!loanAccount.groupLoanAccountMember}">			
+										<span class="fontnormal8pt"> <html-el:link styleId="loanaccountdetail.link.applyCharges"
+											href="applyChargeAction.do?method=load&accountId=${loanInformationDto.accountId}&randomNUm=${sessionScope.randomNUm}&currentFlowKey=${requestScope.currentFlowKey}">
+											<mifos:mifoslabel name="loan.apply_charges" />
+										</html-el:link><br>
+										</span>
+									</c:if>
+								</c:when>
+							</c:choose>
+							<c:choose>
+								<c:when
+									test="${(loanInformationDto.accountStateId==3 || loanInformationDto.accountStateId==4) && !loanAccount.groupLoanAccountMember}">
+									<tr>
+										<td class="paddingL10"><span class="fontnormal8pt">
+										<c:url value="loanDisbursementAction.do" var="loanDisbursementActionLoadMethodUrl" >
+											<c:param name="method" value="load" />
+											<c:param name="accountId" value="${loanInformationDto.accountId}" />
+											<c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+											<c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}" />
+											<c:param name="randomNUm" value="${sessionScope.randomNUm}" />
+											<c:param name="currentFlowKey" value="${requestScope.currentFlowKey}" />
+										</c:url >
+										<html-el:link styleId="loanaccountdetail.link.disburseLoan"
+											href="${loanDisbursementActionLoadMethodUrl}">
+											<mifos:mifoslabel name="loan.disburseloan" />
+										</html-el:link> <br>
+										</span></td>
+									</tr>
+								</c:when>
+							</c:choose> 
+						<c:url value="repayLoanAction.do" var="repayLoanActionLoadRepaymentMethodUrl" >
+							<c:param name="method" value="loadRepayment" />
+							<c:param name="accountId" value="${loanInformationDto.accountId}" />
+							<c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+							<c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}" />
+							<c:param name="randomNUm" value="${sessionScope.randomNUm}" />
+							<c:param name="currentFlowKey" value="${requestScope.currentFlowKey}" />
+						</c:url >
+                        <c:url value="repayLoanAction.do" var="repayLoanActionLoadGroupRepaymentMethodUrl" >
+                            <c:param name="method" value="loadGroupRepayment" />
+                            <c:param name="accountId" value="${loanInformationDto.accountId}" />
+                            <c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+                            <c:param name="prdOfferingName" value="${loanInformationDto.prdOfferingName}" />
+                            <c:param name="randomNUm" value="${sessionScope.randomNUm}" />
+                            <c:param name="currentFlowKey" value="${requestScope.currentFlowKey}" />
+                        </c:url >
+							<c:choose>
+								<c:when
+									test="${ loanInformationDto.accountStateId=='9' || loanInformationDto.accountStateId=='5'}">
+									<span class="fontnormal8pt"> 
+                                        <c:if test="${!loanAccount.groupLoanAccountMember && loanAccount.parentGroupLoanAccount}">
+                                            <html-el:link styleId="loanaccountdetail.link.repayLoan"
+                                                href="${repayLoanActionLoadGroupRepaymentMethodUrl}">
+                                                <mifos:mifoslabel name="loan.repay" />
+                                                <mifos:mifoslabel name="${ConfigurationConstants.LOAN}" />
+                                            </html-el:link><br>
+                                        </c:if>
+                                        <c:if test="${!loanAccount.groupLoanAccountMember && !loanAccount.parentGroupLoanAccount}">
+                                            <html-el:link styleId="loanaccountdetail.link.repayLoan"
+                                                href="${repayLoanActionLoadRepaymentMethodUrl}">
+                                                <mifos:mifoslabel name="loan.repay" />
+                                                <mifos:mifoslabel name="${ConfigurationConstants.LOAN}" />
+                                            </html-el:link><br>
+                                        </c:if>
+									</span>
+								</c:when>
+							</c:choose></td>
+						<tr>
+					</table>
+					</c:if>
+					<table width="95%" border="0" cellspacing="0" cellpadding="0">
+						<tr>
+							<td><img src="pages/framework/images/trans.gif" width="7"
+								height="8"></td>
+						</tr>
+					</table>
+					
+					<table width="100%" border="0" cellpadding="2" cellspacing="0"
+						class="bluetableborder">
+						<tr>
+							<td class="bluetablehead05"><span class="fontnormalbold">
+							<mifos:mifoslabel name="loan.performance_history" /> </span></td>
+						</tr>
+						<tr>
+							<td class="paddingL10"><span class="fontnormal8pt"><mifos:mifoslabel
+								name="loan.of_payments" /> <fmt:formatNumber
+								value="${loanInformationDto.performanceHistory.noOfPayments}" /></span></td>
+						</tr>
+						<tr>
+							<td class="paddingL10"><span class="fontnormal8pt"><mifos:mifoslabel
+								name="loan.missed_payments" /> <fmt:formatNumber
+								value="${loanInformationDto.performanceHistory.totalNoOfMissedPayments}" /></span></td>
+						</tr>
+						<tr>
+							<td class="paddingL10"><span class="fontnormal8pt"><mifos:mifoslabel
+								name="loan.days_arrears" /><fmt:formatNumber
+								value="${loanInformationDto.performanceHistory.daysInArrears}" /> </span></td>
+						</tr>
+						<tr>
+							<td class="paddingL10"><span class="fontnormal8pt"><mifos:mifoslabel
+								name="loan.maturity_date" /><c:out
+								value="${userdatefn:getUserLocaleDate(sessionScope.UserContext.preferredLocale,loanInformationDto.performanceHistory.loanMaturityDate)}" />
+							</span></td>
+						</tr>
+					</table>
+					<c:set value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'overpayments')}"
+					var="overpayments" />
+					<c:if test="${!empty overpayments}">
+					    <table width="95%" border="0" cellspacing="0" cellpadding="0">
+						    <tr>
+							    <td><img src="pages/framework/images/trans.gif" width="7" height="8"></td>
+						    </tr>
+					    </table>
+				        <table width="100%" border="0" cellpadding="2" cellspacing="0"
+							class="bluetableborder">
+							<tr>
+								<td colspan="2" class="bluetablehead05">
+								    <span class="fontnormalbold"> <mifos:mifoslabel name="loan.overpayments" /> </span>
+								</td>
+							</tr>
+							<tr>
+								<td colspan="2" class="paddingL10">
+								    <img src="pages/framework/images/trans.gif" width="10" height="2">
+								</td>
+							</tr>
+						    <c:forEach items="${overpayments}" var="overpayment">
+						              <tr>
+						                <td width="70%" class="paddingL10">
+						                  <span class="fontnormal8pt">
+						                    <c:out value="${overpayment.actualOverpaymentAmount}"/>
+						                  </span>
+						                </td>
+						                <td width="30%" align="left" class="paddingL10">
+						                     <c:url value="clearOverpayment.ftl" var="clearOverpaymentMethodUrl" >
+						                      <c:param name="globalAccountNum" value="${loanInformationDto.globalAccountNum}" />
+						                      <c:param name="overpaymentId" value="${overpayment.overpaymentId}" />
+						                     </c:url >
+						                  <span class="fontnormal8pt">
+						                      <a href="${clearOverpaymentMethodUrl}">
+						                          <mifos:mifoslabel name="loan.overpayments_clear" />
+						                      </a>
+						                  </span>
+						                </td>
+						              </tr>
+						    </c:forEach>
+					    </table>
+					</c:if>
+					<c:set value="${session:getFromSession(sessionScope.flowManager,requestScope.currentFlowKey,'questionGroupInstances')}"
+			   				var="questionGroupInstances" />
+					<table width="95%" border="0" cellspacing="0" cellpadding="0">
+						<tr>
+							<td><img src="pages/framework/images/trans.gif" width="7"
+								height="8"></td>
+						</tr>
+					</table>
+                        <c:choose>
+                        <c:when test="${!loanAccount.groupLoanAccountMember}">
+						<table width="100%" border="0" cellpadding="2" cellspacing="0"
+							class="bluetableborder">
+							<tr>
+								<td colspan="2" class="bluetablehead05"><span
+									class="fontnormalbold"> <mifos:mifoslabel
+									name="Surveys.Surveys" bundle="SurveysUIResources" /> </span></td>
+							</tr>
+							<tr>
+								<td colspan="2" class="paddingL10"><img
+									src="pages/framework/images/trans.gif" width="10" height="2"></td>
+							</tr>
+								<c:if test="${!empty questionGroupInstances}">
+						            <c:forEach items="${questionGroupInstances}" var="questionGroupInstance">
+						              <tr>
+						                <td width="70%" class="paddingL10">
+						                   <c:url value="viewAndEditQuestionnaire.ftl" var="viewAndEditQuestionnaireMethodUrl" >
+						                    <c:param name="creatorId" value="${sessionScope.UserContext.id}" />
+						                    <c:param name="entityId" value="${loanInformationDto.accountId}" />
+						                    <c:param name="instanceId" value="${questionGroupInstance.id}" />
+						                    <c:param name="event" value="View" />
+						                    <c:param name="source" value="Loan" />
+						                   </c:url >
+						                  <span class="fontnormal8pt">
+						                    <a id="${questionGroupInstance.id}" href="${viewAndEditQuestionnaireMethodUrl}&backPageUrl=${backPageUrl}">
+						                      <c:out value="${questionGroupInstance.questionGroupTitle}"/>
+						                    </a>
+						                  </span>
+						                </td>
+						                <td width="30%" align="left" class="paddingL10">
+						                  <span class="fontnormal8pt">
+						                    <label id="label.${questionGroupInstance.id}">
+						                        <c:out value="${userdatefn:getUserLocaleDate(sessionScope.UserContext.preferredLocale, questionGroupInstance.dateCompleted)}" />
+						                    </label>
+						                  </span>
+						                </td>
+						              </tr>
+						            </c:forEach>
+								</c:if>
+							<tr>
+								<td colspan="2" align="right" class="paddingleft05">
+								<span class="fontnormal8pt">
+				                  	<c:url value="questionnaire.ftl" var="questionnaireUrl" >
+					                    <c:param name="creatorId" value="${sessionScope.UserContext.id}" />
+					                    <c:param name="entityId" value="${loanInformationDto.accountId}" />
+					                    <c:param name="event" value="View" />
+					                    <c:param name="source" value="Loan" />
+					                    <c:param name="backPageUrl" value="${currentPageUrl}" />
+			                  	 	</c:url >
+                                    <a id="loanaccountdetail.link.attachSurvey" href="${questionnaireUrl}">
+                                        <mifos:mifoslabel name="Surveys.attachasurvey" bundle="SurveysUIResources" />
+                                    </a><br>
+								</span>
+						</table>
+			             </c:when>
+						</c:choose>
+						<table width="95%" border="0" cellspacing="0" cellpadding="0">
+							<tr>
+								<td><img src="pages/framework/images/trans.gif" width="7"
+									height="8"></td>
+							</tr>
+						</table>
+					<table width="100%" border="0" cellpadding="2" cellspacing="0"
+						class="bluetableborder">
+						<tr>
+							<td class="bluetablehead05"><span class="fontnormalbold">
+							<mifos:mifoslabel name="loan.recent_notes" /> </span></td>
+						</tr>
+						<tr>
+							<td class="paddingL10"><img
+								src="pages/framework/images/trans.gif" width="10" height="2"></td>
+						</tr>
+						<tr>
+							<td class="paddingL10" id="recentNotes"><c:choose>
+								<c:when
+									test="${!empty loanAccount.recentAccountNotes}">
+									<c:forEach var="note" items="${loanAccount.recentAccountNotes}">
+										<span class="fontnormal8ptbold"> <c:out
+											value="${userdatefn:getUserLocaleDate(sessionScope.UserContext.preferredLocale,note.commentDate)}" />:</span>
+										<span class="fontnormal8pt"> <c:out
+											value="${note.comment}" />-<em> <c:out
+											value="${note.personnel.displayName}" /></em><br>
+										<br>
+										</span>
+									</c:forEach>
+								</c:when>
+								<c:otherwise>
+									<span class="fontnormal"> <mifos:mifoslabel
+										name="accounts.NoNotesAvailable" /> </span>
+								</c:otherwise>
+							</c:choose></td>
+						</tr>
+						<tr>
+							<td align="right" class="paddingleft05"><span
+								class="fontnormal8pt"> <c:if
+								test="${!empty loanAccount.recentAccountNotes}">
+								<html-el:link styleId="loanaccountdetail.link.seeAllNotes"
+									href="notesAction.do?method=search&accountId=${loanInformationDto.accountId}&globalAccountNum=${loanInformationDto.globalAccountNum}&accountTypeId=${loanInformationDto.accountTypeId}&currentFlowKey=${requestScope.currentFlowKey}&randomNUm=${sessionScope.randomNUm}">
+									<mifos:mifoslabel name="loan.seeallnotes" />
+								</html-el:link>
+							</c:if> <br>
+							<html-el:link styleId="loanaccountdetail.link.addNote"
+								href="notesAction.do?method=load&accountId=${loanInformationDto.accountId}&currentFlowKey=${requestScope.currentFlowKey}&randomNUm=${sessionScope.randomNUm}">
+								<mifos:mifoslabel name="loan.addnote" />
+							</html-el:link> </span></td>
+						</tr>
+					</table>
+					</td>
+				</tr>
+			</table>
+			<!-- This hidden variable is being used in the next page -->
+			<html-el:hidden property="accountTypeId"
+				value="${loanInformationDto.accountTypeId}" />
+			<html-el:hidden property="accountId" value="${loanInformationDto.accountId}" />
+			<html-el:hidden property="globalAccountNum"
+				value="${loanInformationDto.globalAccountNum}" />
+		</html-el:form>
+	</tiles:put>
+</tiles:insert>

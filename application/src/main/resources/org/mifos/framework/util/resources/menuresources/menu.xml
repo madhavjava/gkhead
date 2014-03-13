@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<mifosmenu>
+    <topmenutab name="Home">
+        <leftmenulabel>
+        label.quickstart
+        </leftmenulabel>
+            <menugroup>
+                <displayname>
+                    <namefragment>label.manage</namefragment>
+                    <namefragment>label.clients</namefragment>
+                </displayname>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.createNewCenter</namefragment>
+                    </displayname>
+                    <linkvalue>centerCustAction.do?method=chooseOffice&amp;recordOfficeId=0&amp;recordLoanOfficerId=0</linkvalue>
+                </menuitem>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.createNewGroup</namefragment>
+                    </displayname>
+                    <linkvalue>groupCustAction.do?method=hierarchyCheck&amp;recordOfficeId=0&amp;recordLoanOfficerId=0&amp;input=createGroup</linkvalue>
+                </menuitem>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.createNewClient</namefragment>
+                    </displayname>
+                  	<linkvalue>groupCustAction.do?method=loadSearch&amp;recordOfficeId=0&amp;recordLoanOfficerId=0&amp;input=createClient</linkvalue>
+                </menuitem>
+            </menugroup>
+            <menugroup>
+                <displayname>
+                        <namefragment>label.manage</namefragment>
+                        <namefragment>label.accounts</namefragment>
+                </displayname>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.openNewLoanAccount</namefragment>
+                    </displayname>
+                    <linkvalue>createLoanAccount.ftl</linkvalue>
+                    <!-- 
+                    <linkvalue> custSearchAction.do?method=loadSearch&amp;recordOfficeId=0&amp;recordLoanOfficerId=0&amp;input=loan    </linkvalue>
+                    -->
+                </menuitem>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.openNewSavingsAccount</namefragment>
+                    </displayname>
+                    <linkvalue>createSavingsAccount.ftl</linkvalue>
+                </menuitem>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.enter</namefragment>
+                        <namefragment>label.collectionsheet</namefragment>
+                        <namefragment>label.data</namefragment>
+                    </displayname>
+                    <linkvalue>collectionsheetaction.do?method=load&amp;recordOfficeId=0&amp;recordLoanOfficerId=0</linkvalue>
+                </menuitem>
+
+
+            </menugroup>
+    </topmenutab>
+    <topmenutab name="Clients &amp; Accounts">
+        <leftmenulabel>Client</leftmenulabel>
+            <menugroup>
+                <displayname>
+                        <namefragment>label.manage</namefragment>
+                        <namefragment>label.collectionsheets</namefragment>
+                </displayname>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.enterCollectionSheetData</namefragment>
+                    </displayname>
+                    <linkvalue>collectionsheetaction.do?method=load&amp;recordOfficeId=0&amp;recordLoanOfficerId=0</linkvalue>
+                </menuitem>
+            </menugroup>
+            <menugroup>
+                <displayname>
+                        <namefragment>label.createnew</namefragment>
+                        <namefragment>label.clients</namefragment>
+
+                </displayname>
+                <menuitem keyForHidden="ClientRules.CenterHierarchyExists">
+                    <displayname>
+                        <namefragment>label.createNewCenter</namefragment>
+                    </displayname>
+                    <linkvalue>centerCustAction.do?method=chooseOffice&amp;recordOfficeId=0&amp;recordLoanOfficerId=0</linkvalue>
+                </menuitem>
+
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.createNewGroup</namefragment>
+                    </displayname>
+                    <linkvalue>groupCustAction.do?method=hierarchyCheck&amp;recordOfficeId=0&amp;recordLoanOfficerId=0&amp;input=createGroup</linkvalue>
+                </menuitem>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.createNewClient</namefragment>
+                    </displayname>
+                    <linkvalue>groupCustAction.do?method=loadSearch&amp;recordOfficeId=0&amp;recordLoanOfficerId=0&amp;input=createClient</linkvalue>
+                </menuitem>
+
+            </menugroup>
+            <menugroup>
+                <displayname>
+                        <namefragment>label.createnew</namefragment>
+                        <namefragment>label.accounts</namefragment>
+                </displayname>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.createSavingsAccount</namefragment>
+                    </displayname>
+                    <linkvalue>createSavingsAccount.ftl</linkvalue>
+                </menuitem>
+
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.createLoanAccount</namefragment>
+                    </displayname>
+                    <linkvalue>createLoanAccount.ftl</linkvalue>
+                    <!-- 
+                    <linkvalue>custSearchAction.do?method=loadSearch&amp;recordOfficeId=0&amp;recordLoanOfficerId=0&amp;input=loan</linkvalue>
+                     -->
+                </menuitem>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.createMultipleLoanAccounts</namefragment>
+                    </displayname>
+                    <linkvalue>multipleloansaction.do?method=load&amp;recordOfficeId=0&amp;recordLoanOfficerId=0</linkvalue>
+                </menuitem>
+            </menugroup>
+            <menugroup>
+                <displayname>
+                        <namefragment>label.manage</namefragment>
+                        <namefragment>label.accountSmall</namefragment>
+                        <namefragment>label.status</namefragment>
+                </displayname>
+                <menuitem>
+                    <displayname>
+                        <namefragment>label.approveMultipleLoans</namefragment>
+                    </displayname>
+                    <linkvalue>ChangeAccountStatus.do?method=load&amp;recordOfficeId=0&amp;recordLoanOfficerId=0</linkvalue>
+                </menuitem>
+            </menugroup>
+    </topmenutab>
+</mifosmenu>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

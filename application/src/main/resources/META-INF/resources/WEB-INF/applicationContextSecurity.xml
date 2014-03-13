@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+    xmlns:beans="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xsi:schemaLocation="http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+    <beans:bean id="loginFormAuthentication" class="org.mifos.security.authentication.MifosLoginUrlAuthenticationEntryPoint">
+        <beans:property name="loginFormUrl" value="/login.ftl" />
+    </beans:bean>
+
+    <beans:bean id="authenticationSuccessHandler" class="org.mifos.security.authentication.MifosAuthenticationSuccessHandler" 
+                p:defaultTargetUrl="/custSearchAction.do?method=getHomePage" 
+                p:targetUrlParameter="spring-security-redirect" />
+
+    <beans:bean id="authenticationFailureHandler" class="org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler">
+        <beans:property name="defaultFailureUrl" value="/login.ftl?accessDenied" />
+        <beans:property name="redirectStrategy" ref="redirectStrategy"/>
+    </beans:bean>
+
+    <beans:bean id="redirectStrategy" class="org.mifos.security.authentication.MifosRedirectStrategy">
+        <beans:property name="restAuthFailureURL" value="/accessDenied.json"/>
+    </beans:bean>
+
+    <global-method-security pre-post-annotations="enabled">
+    	<expression-handler ref="expressionHandler"/>
+    </global-method-security>
+
+	<beans:bean id="expressionHandler" class="org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler" >
+   		<beans:property name="permissionEvaluator" ref="permissionEvaluator"/>
+	</beans:bean>
+	
+	<beans:bean id="permissionEvaluator" class="org.mifos.security.rolesandpermission.authorization.MifosPermissionEvaluator">
+	</beans:bean>
+
+    <http pattern="/ping.ftl" security="none" />
+    <http pattern="/dateTimeUpdate.ftl*" security="none" />
+    <http pattern="/initializeApplication.ftl*" security="none" />
+    <http pattern="/customPropertiesUpdate.ftl*" security="none" />
+    <http pattern="/uncaughtException.ftl" security="none" />
+    <http pattern="/getMifosLogo.ftl" security="none" />
+    
+    <http pattern="/**/*.css*" security="none" />
+    <http pattern="/**/*.gif" security="none" />
+    <http pattern="/pages/framework/images/favicon.ico" security="none" />
+    <http pattern="/**/*.jpg" security="none" />
+    <http pattern="/**/*.js" security="none" />
+    <http pattern="/**/*.html" security="none" />
+    <http pattern="/login.ftl*" security="none" />
+    <http pattern="/restLogin.ftl" security="none" />
+    <http pattern="/accessDenied.json" security="none" />
+
+	<http pattern="/basic/**" use-expressions="true" create-session="stateless">
+		<intercept-url pattern="/**" access="isFullyAuthenticated()" />
+		<http-basic/>
+	</http>
+
+    <http auto-config="false" entry-point-ref="loginFormAuthentication" use-expressions="true">
+        <custom-filter position="FORM_LOGIN_FILTER" ref="mifosLegacyAuthenticationFilter" />
+
+        <intercept-url pattern="/createQuestion.ftl*" access="isFullyAuthenticated() and hasRole('ROLE_CAN_MANAGE_QUESTION_GROUPS')"/>
+        <intercept-url pattern="/createQuestionGroup.ftl*" access="isFullyAuthenticated() and hasRole('ROLE_CAN_MANAGE_QUESTION_GROUPS')"/>
+        <intercept-url pattern="/viewAndEditQuestion.ftl*" access="isFullyAuthenticated() and hasRole('ROLE_CAN_MANAGE_QUESTION_GROUPS')"/>
+        <intercept-url pattern="/viewAndEditQuestionGroup.ftl*" access="isFullyAuthenticated()"/>
+        <intercept-url pattern="/uploadQuestionGroup.ftl*" access="isFullyAuthenticated() and hasRole('ROLE_CAN_MANAGE_QUESTION_GROUPS')"/>
+        <intercept-url pattern="/defineNewPenalty.ftl*" access="isFullyAuthenticated() and hasRole('ROLE_DEFINE_PENALTY')"/>
+        <intercept-url pattern="/editPenalty.ftl*" access="isFullyAuthenticated() and hasRole('ROLE_MODIFY_PENALTY')"/>
+
+        <intercept-url pattern="/**" access="isFullyAuthenticated()" />
+        <logout logout-success-url="/login.ftl?loggedout"/>
+    </http>
+
+    <authentication-manager alias="authenticationManager">
+        <authentication-provider ref="mifosAuthenticationProvider"/>
+    </authentication-manager>
+	
+    <beans:bean id="mifosLegacyAuthenticationFilter" class="org.mifos.security.authentication.MifosLegacyUsernamePasswordAuthenticationFilter">
+        <beans:constructor-arg ref="loginServiceFacade" />
+        <beans:property name="authenticationManager" ref="authenticationManager" />
+        <beans:property name="authenticationSuccessHandler" ref="authenticationSuccessHandler" />
+        <beans:property name="authenticationFailureHandler" ref="authenticationFailureHandler" />
+    </beans:bean>
+    
+    <beans:bean id="mifosAuthenticationProvider" class="org.mifos.security.authentication.MifosDaoAuthenticationProvider">
+        <beans:property name="userDetailsService" ref="mifosAuthenticationAuthorizationService" />
+    </beans:bean>
+</beans:beans>

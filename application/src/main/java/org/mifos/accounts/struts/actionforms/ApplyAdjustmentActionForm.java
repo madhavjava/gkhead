@@ -1,0 +1,399 @@
+/*
+ * Copyright (c) 2005-2011 Grameen Foundation USA
+ * All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ *
+ * See also http://www.apache.org/licenses/LICENSE-2.0.html for an
+ * explanation of the license and how it is applied.
+ */
+
+package org.mifos.accounts.struts.actionforms;
+
+import static org.mifos.framework.util.helpers.DateUtils.getDateAsSentFromBrowser;
+
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.struts.action.ActionErrors;
+import org.apache.struts.action.ActionMapping;
+import org.apache.struts.action.ActionMessage;
+import org.mifos.accounts.util.helpers.AccountConstants;
+import org.mifos.application.admin.servicefacade.InvalidDateException;
+import org.mifos.application.master.business.MifosCurrency;
+import org.mifos.config.AccountingRules;
+import org.mifos.dto.domain.AdjustedPaymentDto;
+import org.mifos.dto.screen.GroupLoanMemberAdjustmentDto;
+import org.mifos.framework.struts.actionforms.BaseActionForm;
+import org.mifos.framework.util.helpers.Constants;
+import org.mifos.framework.util.helpers.DateUtils;
+import org.mifos.framework.util.helpers.DoubleConversionResult;
+import org.mifos.security.login.util.helpers.LoginConstants;
+import org.mifos.security.util.UserContext;
+
+import com.ibm.icu.math.BigDecimal;
+
+/**
+ * This class is the action form for Applying adjustments.
+ */
+public class ApplyAdjustmentActionForm extends BaseActionForm {
+
+    private static final long serialVersionUID = -5747465818008310010L;
+
+    private String input;
+
+    private String adjustmentNote;
+
+    private Integer accountId;
+    
+    private String globalAccountNum;
+
+    private boolean adjustcheckbox;
+
+    private Integer paymentId;
+
+    private String amount;
+
+    private String paymentType;
+
+    private Short currencyId;
+
+    private String transactionDateDD;
+
+    private String transactionDateMM;
+
+    private String transactionDateYY;
+
+    private boolean adjustData;
+
+    private Date previousPaymentDate;
+
+    private Date nextPaymentDate;
+
+    private List<GroupLoanMemberAdjustmentDto> memberAdjustmentDtoList;
+    
+    /**
+     * member adjustment new amounts
+     * Key - Member Account Id
+     * Value - Member New Amount
+     */
+    private Map<Integer, String> newAmounts = new HashMap<Integer, String>(); 
+    
+    /**
+     * NOT-GLIM new group loan member flag
+     */
+    private boolean groupLoanMember;
+    
+    public Date getPreviousPaymentDate() {
+        return previousPaymentDate;
+    }
+
+    public void setPreviousPaymentDate(Date previousPaymentDate) {
+        this.previousPaymentDate = previousPaymentDate;
+    }
+
+    public Date getNextPaymentDate() {
+        return nextPaymentDate;
+    }
+
+    public void setNextPaymentDate(Date nextPaymentDate) {
+        this.nextPaymentDate = nextPaymentDate;
+    }
+
+    public boolean isAdjustData() {
+        return adjustData;
+    }
+
+    public void setAdjustData(boolean adjustData) {
+        this.adjustData = adjustData;
+    }
+
+    public Short getCurrencyId() {
+        return currencyId;
+    }
+
+    public void setCurrencyId(Short currencyId) {
+        this.currencyId = currencyId;
+    }
+
+    public Integer getPaymentId() {
+        return paymentId;
+    }
+
+    public void setPaymentId(Integer paymentId) {
+        this.paymentId = paymentId;
+    }
+
+    public String getInput() {
+        return input;
+    }
+
+    public void setInput(String input) {
+        this.input = input;
+    }
+
+    public String getAdjustmentNote() {
+        return adjustmentNote;
+    }
+
+    public void setAdjustmentNote(String adjustmentNote) {
+        this.adjustmentNote = adjustmentNote;
+    }
+
+    public Integer getAccountId() {
+        return accountId;
+    }
+
+    public void setAccountId(Integer accountId) {
+        this.accountId = accountId;
+    }
+
+    public String getGlobalAccountNum() {
+        return globalAccountNum;
+    }
+
+    public void setGlobalAccountNum(String globalAccountNum) {
+        this.globalAccountNum = globalAccountNum;
+    }
+
+    public boolean getAdjustcheckbox() {
+        return adjustcheckbox;
+    }
+
+    public void setAdjustcheckbox(boolean adjustcheckbox) {
+        this.adjustcheckbox = adjustcheckbox;
+
+    }
+
+    public String getAmount() {
+        return amount;
+    }
+
+    public void setAmount(String amount) {
+        this.amount = amount;
+    }
+
+    public String getPaymentType() {
+        return paymentType;
+    }
+
+    public void setPaymentType(String paymentType) {
+        this.paymentType = paymentType;
+    }
+
+    public String getTransactionDateDD() {
+        return transactionDateDD;
+    }
+
+    public void setTransactionDateDD(String transactionDateDD) {
+        this.transactionDateDD = transactionDateDD;
+    }
+
+    public String getTransactionDateMM() {
+        return transactionDateMM;
+    }
+
+    public void setTransactionDateMM(String transactionDateMM) {
+        this.transactionDateMM = transactionDateMM;
+    }
+
+    public String getTransactionDateYY() {
+        return transactionDateYY;
+    }
+
+    public void setTransactionDateYY(String transactionDateYY) {
+        this.transactionDateYY = transactionDateYY;
+    }
+
+    public List<GroupLoanMemberAdjustmentDto> getMemberAdjustmentDtoList() {
+        return memberAdjustmentDtoList;
+    }
+
+    public void setMemberAdjustmentDtoList(List<GroupLoanMemberAdjustmentDto> memberAdjustmentDtoList) {
+        this.memberAdjustmentDtoList = memberAdjustmentDtoList;
+    }
+
+    public Map<Integer, String> getNewAmounts() {
+        return newAmounts;
+    }
+
+    public void setNewAmount(String accountId, String newAmount){
+        this.newAmounts.put(Integer.valueOf(accountId), newAmount);
+    }
+    
+    public boolean isGroupLoanMember() {
+        return groupLoanMember;
+    }
+
+    public void setGroupLoanMember(boolean groupLoanMemberFlag) {
+        this.groupLoanMember = groupLoanMemberFlag;
+    }
+
+    protected Locale getUserLocale(HttpServletRequest request) {
+        Locale locale = null;
+        HttpSession session = request.getSession();
+        if (session != null) {
+            UserContext userContext = (UserContext) session.getAttribute(LoginConstants.USERCONTEXT);
+            if (null != userContext) {
+                locale = userContext.getCurrentLocale();
+
+            }
+        }
+        return locale;
+    }
+
+    public String getTransactionDate() {
+        return compileDateString(transactionDateDD, transactionDateMM, transactionDateYY);
+    }
+
+    @Override
+    public void reset(ActionMapping actionMapping, HttpServletRequest request) {
+        this.adjustcheckbox = false;
+    }
+
+    @Override
+    public ActionErrors validate(ActionMapping actionMapping, HttpServletRequest request) {
+        if (null == request.getAttribute(Constants.CURRENTFLOWKEY)) {
+            request.setAttribute(Constants.CURRENTFLOWKEY, request.getParameter(Constants.CURRENTFLOWKEY));
+        }
+        ActionErrors actionErrors = new ActionErrors();
+        String method = request.getParameter("method");
+        if (null != method && method.equals("previewAdjustment")) {
+/*            if (!adjustcheckbox) {
+                request.setAttribute("method", "loadAdjustment");
+                actionErrors.add("", new ActionMessage("errors.mandatorycheckbox"));
+            }*/
+            if (!adjustcheckbox) {
+                validateAmount(actionErrors);
+                validatePaymentType(actionErrors);
+                validateTransactionDate(actionErrors);
+            }
+            if (adjustmentNote == null || adjustmentNote.trim() == "") {
+                request.setAttribute("method", "loadAdjustment");
+                actionErrors.add("", new ActionMessage("errors.mandatorytextarea"));
+            } else if (adjustmentNote.length() > 300) {
+                request.setAttribute("method", "loadAdjustment");
+                actionErrors.add("", new ActionMessage("errors.adjustmentNoteTooBig"));
+            }
+            if (!actionErrors.isEmpty()) {
+                request.setAttribute("method", "loadAdjustment");
+                return actionErrors;
+            }
+        }
+        return actionErrors;
+    }
+
+
+    protected void validateAmount(ActionErrors errors) {
+        MifosCurrency currency = null;
+        if (getCurrencyId() != null && AccountingRules.isMultiCurrencyEnabled()) {
+            currency = AccountingRules.getCurrencyByCurrencyId(getCurrencyId());
+        }
+        DoubleConversionResult conversionResult = validateAmount(getAmount(), currency , AccountConstants.ACCOUNT_AMOUNT, errors, "");
+        if (conversionResult.getErrors().size() == 0 && !(conversionResult.getDoubleValue() > 0.0)) {
+            addError(errors, AccountConstants.ACCOUNT_AMOUNT, AccountConstants.ERRORS_MUST_BE_GREATER_THAN_ZERO,
+                    getLocalizedMessage(AccountConstants.ACCOUNT_AMOUNT));
+        }
+    }
+
+    private void validateTransactionDate(ActionErrors errors) {
+        String fieldName = "accounts.date_of_trxn";
+        ActionErrors validationErrors = validateDate(getTransactionDate(), getLocalizedMessage(fieldName));
+
+        if (null != validationErrors && !validationErrors.isEmpty()) {
+            errors.add(validationErrors);
+        }
+    }
+
+    private void validatePaymentType(ActionErrors errors) {
+        if (StringUtils.isEmpty(getPaymentType())) {
+            errors.add(AccountConstants.ERROR_MANDATORY, new ActionMessage(AccountConstants.ERROR_MANDATORY,
+                    getLocalizedMessage("accounts.mode_of_payment")));
+        }
+    }
+
+    protected ActionErrors validateDate(String date, String fieldName) {
+        ActionErrors errors = null;
+        java.sql.Date sqlDate = null;
+        if (date != null && !date.equals("")) {
+            try {
+                sqlDate = getDateAsSentFromBrowser(date);
+                if (DateUtils.whichDirection(sqlDate) > 0) {
+                    errors = new ActionErrors();
+                    errors.add(AccountConstants.ERROR_FUTUREDATE, new ActionMessage(AccountConstants.ERROR_FUTUREDATE,
+                            fieldName));
+                } else if (previousPaymentDate != null && sqlDate.compareTo(previousPaymentDate) < 0) {
+                    errors = new ActionErrors();
+                    errors.add(AccountConstants.ERROR_ADJUSTMENT_PREVIOUS_DATE, new ActionMessage(AccountConstants.ERROR_ADJUSTMENT_PREVIOUS_DATE,
+                            fieldName));
+                } else if (nextPaymentDate != null && sqlDate.compareTo(nextPaymentDate) > 0) {
+                    errors = new ActionErrors();
+                    errors.add(AccountConstants.ERROR_ADJUSTMENT_NEXT_DATE, new ActionMessage(AccountConstants.ERROR_ADJUSTMENT_NEXT_DATE,
+                            fieldName));
+                }
+            } catch (InvalidDateException ide) {
+                errors = new ActionErrors();
+                errors.add(AccountConstants.ERROR_INVALIDDATE, new ActionMessage(AccountConstants.ERROR_INVALIDDATE,
+                        fieldName));
+            }
+        } else {
+            errors = new ActionErrors();
+            errors.add(AccountConstants.ERROR_MANDATORY, new ActionMessage(AccountConstants.ERROR_MANDATORY,
+                            fieldName));
+        }
+
+        return errors;
+    }
+
+    public Date getTrxnDate() throws InvalidDateException {
+        return getDateAsSentFromBrowser(getTransactionDate());
+    }
+
+    public void setTrxnDate(Date date) {
+        if (date == null) {
+            transactionDateDD = null;
+            transactionDateMM = null;
+            transactionDateYY = null;
+        } else {
+            Calendar cal = GregorianCalendar.getInstance();
+            cal.setTime(date);
+            transactionDateDD = Integer.toString(cal.get(Calendar.DAY_OF_MONTH));
+            transactionDateMM = Integer.toString(cal.get(Calendar.MONTH) + 1);
+            transactionDateYY = Integer.toString(cal.get(Calendar.YEAR));
+        }
+    }
+
+    public AdjustedPaymentDto getPaymentData() throws InvalidDateException {
+        AdjustedPaymentDto adjustedPaymentDto = null;
+        if (adjustData || isGroupLoanMember()) {
+            List<AdjustedPaymentDto> membersAdjustedPaymentDtoList = new ArrayList<AdjustedPaymentDto>();
+            for (Map.Entry<Integer, String> member : this.newAmounts.entrySet()) {
+                membersAdjustedPaymentDtoList.add(new AdjustedPaymentDto(member.getValue(), getTrxnDate(), Short.parseShort(paymentType), member.getKey()));
+            }
+            String newAmount = (adjustData) ? amount : BigDecimal.ZERO.toString(); 
+            adjustedPaymentDto = new AdjustedPaymentDto(newAmount, getTrxnDate(), Short.parseShort(paymentType), this.accountId, membersAdjustedPaymentDtoList);
+        }
+        return adjustedPaymentDto;
+    }
+}
