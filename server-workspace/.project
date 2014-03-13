@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+  <name>mifos-server-workspace</name>
+  <comment>For Mifos Eclipse Maven-based Development Environment (or any other IDE with M2E-like Maven support). NO_M2ECLIPSE_SUPPORT: Project files created with the maven-eclipse-plugin are not supported in M2Eclipse.</comment>
+  <projects>
+    <project>mifos-server-jetty</project>
+    <project>mifos-webapp</project>
+    <project>mifos-db</project>
+    <project>mifos-common</project>
+    <project>mifos-domain-dto</project>
+    <project>mifos-accounting</project>
+    <project>mifos-userInterface</project>
+    <project>mifos-serviceInterfaces</project>
+    <project>mifos-questionnaire</project>
+    <project>mifos-abstract-domain</project>
+    <project>mifos-cashflow</project>
+    <project>mifos-organization</project>
+    <project>mifos-appdomain</project>
+    <project>mifos-reporting</project>
+    <project>mifos-reporting-libs</project>
+    <project>mifos-rest</project>
+  </projects>
+  <buildSpec>
+    <buildCommand>
+      <name>org.eclipse.jdt.core.javabuilder</name>
+    </buildCommand>
+    <buildCommand>
+      <name>org.eclipse.m2e.core.maven2Builder</name>
+    </buildCommand>
+  </buildSpec>
+  <natures>
+    <nature>org.eclipse.m2e.core.maven2Nature</nature>
+    <nature>org.eclipse.jdt.core.javanature</nature>
+    <nature>org.maven.ide.eclipse.maven2Nature</nature>
+  </natures>
+</projectDescription>
