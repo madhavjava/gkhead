@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+
+    <bean id="configurationLocator" class="org.mifos.framework.util.ConfigurationLocator"/>
+
+
+    <bean id="defaultAcceptanceTestNonDatabaseProperties" factory-bean="configurationLocator"
+        factory-method="getCustomFilePath">
+        <constructor-arg value="acceptanceTest.properties" />
+    </bean>
+
+    <bean id="customAcceptanceTestProperties" factory-bean="configurationLocator"
+        factory-method="getCustomFilePath">
+        <constructor-arg value="local.properties" />
+    </bean>
+
+    <bean id="propertyConfigurer"
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="ignoreResourceNotFound" value="true"/>
+        <property name="locations">
+            <list>
+                <value>classpath:org/mifos/config/resources/acceptanceDatabase.properties</value>
+                <value>classpath:org/mifos/config/resources/acceptanceTest.properties</value>
+                <ref bean="customAcceptanceTestProperties"/>
+                <value>file:target/maven.properties</value>
+            </list>
+        </property>
+    </bean>
+
+</beans>
