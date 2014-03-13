@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright (c) 2005-2011 Grameen Foundation USA
+1029 Vermont Avenue, NW, Suite 400, Washington DC 20005
+All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied. See the License for the specific language governing
+permissions and limitations under the License.
+
+See also http://www.apache.org/licenses/LICENSE-2.0.html for an
+explanation of the license and how it is applied.
+-->
+
+<!--
+Chart of Accounts XML configuration. The filename starts with "mifos" so
+this file can be easily differentiated from other files on the CLASSPATH
+when Class.getResource() (or something similiar) is used to search for
+this file.
+
+"code" attributes refer to general ledger account codes. This attribute can
+contain numbers and letters.
+
+"name" refers to the general ledger account name. This attribute can
+contain numbers and letters.
+
+code/name combinations must be unique or Mifos will not initialize.
+
+Once this file is set and Mifos is deployed, only the name attributes may be
+changed.
+
+Leading and trailing whitespace will be trimmed.
+
+See mifosChartOfAccounts.xsd for XML validation details.
+-->
+<configuration>
+    <ChartOfAccounts>
+        <GLAssetsAccount code="10000" name="ASSETS">
+            <GLAccount code="11000" name="Cash and bank balances">
+                <GLAccount code="11100" name="Petty Cash Accounts">
+                    <GLAccount code="11101" name="Cash 1" />
+                    <GLAccount code="11102" name="Cash 2" />
+                </GLAccount>
+                <GLAccount code="11200" name="Bank Balances">
+                    <GLAccount code="11201" name="Bank Account 1" />
+                    <GLAccount code="11202" name="Bank Account 2" />
+                </GLAccount>
+                <GLAccount code="11300" name="Transfers">
+                    <GLAccount code="11301" name="Inter Office Transfers" />
+                </GLAccount>
+            </GLAccount>
+            <GLAccount code="13000" name="Loan Portfolio">
+                <GLAccount code="13100" name="Loans and Advances">
+                    <GLAccount code="1501" name="General Loan"/>
+                    <GLAccount code="1502" name="Supplementary Loan" />
+                    <GLAccount code="1503" name="Emergency Loan" />
+                    <GLAccount code="1506" name="Sanitation Loan" />
+                    <GLAccount code="1507" name="Cook Stove Loan" />
+                    <GLAccount code="1508" name="Advanced Collection" />
+                    <GLAccount code="1513" name="PEC Enterprise Loan" />
+                    <GLAccount code="1515" name="Samrudhi Loan" />
+                    <GLAccount code="1516" name="IGL-PRAGATI" />
+                    <GLAccount code="1517" name="GRAVITY Loans" />
+                    <GLAccount code="1518" name="Micro-Enterprise Loan" />
+                    <GLAccount code="1519" name="Arogya Loan" />
+                    <GLAccount code="1520" name="Festival Loan" />
+                    <GLAccount code="1521" name="Pragati Supplement Loan" />
+                    <GLAccount code="1523" name="Water Loan" />
+                    <GLAccount code="1524" name="Education Loans" />
+                    <GLAccount code="1525" name="Medical Loan" />
+                    <GLAccount code="1526" name="Grameen Niwas Loan" />
+                    <GLAccount code="1528" name="Swavalamban Loan" />
+                    <GLAccount code="1529" name="Livelihood improvement Loan" />
+                    <GLAccount code="13101" name="Loans to clients" />
+                </GLAccount>
+                <GLAccount code="13200" name="Loan Loss Provisions">
+                    <GLAccount code="13201" name="Write-offs" />
+                </GLAccount>
+            </GLAccount>
+            <GLAccount code="1000" name="	 Assert"/>
+            <GLAccount code="1001" name="Cash in Hand"/>
+           
+            <GLAccount code="1201" name="Gas deposit">
+                    <GLAccount code="1202" name="Telephone deposit" />
+                    <GLAccount code="1203" name="Deceased Mems OS(HO) Insu" />
+                    <GLAccount code="1204" name="Deceased Mems OS(HO)Non Insu" />
+                    <GLAccount code="1205" name="Fraud  Misappropriation" />
+                    <GLAccount code="1208" name="Cash in Transit, Vault  Loss" />
+                    <GLAccount code="1209" name="Service Tax Input" />
+                    <GLAccount code="1211" name="Insurance refund HO Account" />
+                    <GLAccount code="1212" name="HO Insurance claim payable Acc" />
+                    <GLAccount code="1213" name="Advanced Collection" />
+            </GLAccount>
+            <GLAccount code="1402" name="Work Advance" />
+        
+                        
+            
+        </GLAssetsAccount>
+        <GLLiabilitiesAccount code="20000" name="LIABILITIES">
+            <GLAccount code="22000" name="Interest Payable">
+                <GLAccount code="22100" name="Interest payable on clients savings">
+                    <GLAccount code="22101" name="Interest on mandatory savings" />
+                </GLAccount>
+            </GLAccount>
+            <GLAccount code="23000" name="Clients Deposits">
+                <GLAccount code="23100" name="Clients Deposits">
+                    <GLAccount code="4601" name="Emergency Fund" />
+                    <GLAccount code="4602" name="Margin Money-1" />
+                    <GLAccount code="4603" name="Margin Money-2" />
+                    <GLAccount code="4606" name="Village Development Fund" />
+                    <GLAccount code="23101" name="Savings accounts" />
+                </GLAccount>
+            </GLAccount>
+            <GLAccount code="24000" name="Mandatory Savings">
+                <GLAccount code="24100" name="Mandatory Savings">
+                    <GLAccount code="24101" name="Mandatory Savings Accounts" />
+                </GLAccount>
+            </GLAccount>
+            <GLAccount code="2000" name="Current Liabilities">
+                    <GLAccount code="2001" name="Cattle insurance claim payable" />
+                    <GLAccount code="2002" name="Cattle Ins Premium Payable" />
+                    <GLAccount code="2003" name="Advance from members" />
+                    <GLAccount code="2005" name="Salary payable" />
+                    <GLAccount code="2008" name="Life Insurance Premium Payable" />
+                    <GLAccount code="2009" name="Life Insurance Claim Payable" />
+                    <GLAccount code="2014" name="Service Tax Output" />
+                    <GLAccount code="2016" name="Insurance Premium Refund Acc" />
+                    <GLAccount code="2019" name="Water Pure-it Control Account" />
+                    <GLAccount code="2022" name="NPS Account" />
+                    <GLAccount code="2023" name="Cook Stove Loan Control A/c" />
+                    <GLAccount code="2024" name="Health Insu Control Acc" />
+                    <GLAccount code="2101" name="HO account" />   
+            </GLAccount>
+            
+        </GLLiabilitiesAccount>
+        <GLIncomeAccount code="30000" name="INCOME">
+            <GLAccount code="31000" name="Direct Income">
+                <GLAccount code="31100" name="Interest income from loans">
+                    <GLAccount code="5001" name="Interest" />
+                    <GLAccount code="31101" name="Interest on loans" />
+                    <GLAccount code="31102" name="Penalty" />
+                </GLAccount>
+                <GLAccount code="31300"
+                    name="Income from micro credit &amp; lending activities">
+                    <GLAccount code="5201" name="Processing Fees" />
+                    <GLAccount code="5202" name="Annual Subscription Fee" />
+                    <GLAccount code="5203" name="Emergency Loan Documentation Fee" />
+                    <GLAccount code="5204" name="Sale of Publication" />
+                    <GLAccount code="5205" name="Fines &amp; Penalties" />
+                    <GLAccount code="6201" name="Miscelleneous Income" />
+                    <GLAccount code="31301" name="Fees" />
+                </GLAccount>
+            </GLAccount>
+            <GLAccount code="31401" name="Income from 999 Account" />
+            
+            <GLAccount code="3000" name="Operating Income">
+                    <GLAccount code="3001" name="Interest received" />
+                    <GLAccount code="3002" name="Processing fees" />
+                     <GLAccount code="3003" name="Non Operating Income" />
+                    <GLAccount code="3004" name="EL-Interest" />
+                     <GLAccount code="3005" name="Fines And penalties" />
+                    <GLAccount code="3007" name="Interest on Swavalamban Loan" />
+                   
+            </GLAccount> 
+            
+        </GLIncomeAccount>
+        <GLExpenditureAccount code="40000" name="EXPENDITURE">
+                 <GLAccount code="45000" name="Operating Expenses">
+                    <GLAccount code="45001" name="Conveyance Expenses" />
+                    <GLAccount code="5002" name="Work shop expenses" />       
+                    <GLAccount code="45003" name="Travelling Expenses" />
+                    <GLAccount code="45005" name="Bank Charges" />           
+                    <GLAccount code="45006" name="Postage And courier" />
+                    <GLAccount code="45007" name="Books And     Journals" />       
+                    <GLAccount code="45008" name="Repair And maintenance" />
+                    <GLAccount code="45009" name="Office Maintenance" />                   
+                    <GLAccount code="45010" name="Rent" />
+                    <GLAccount code="45011" name="Electricity" />
+                    <GLAccount code="45012" name="Printing And Stationery" />
+                    <GLAccount code="45013" name="Telephone Fax -Voice Charges" />
+                    <GLAccount code="45014" name="Branch Start-up Expenses" />
+                    <GLAccount code="45015" name="Branch Welfare Expenses" />
+                    <GLAccount code="45016" name="DSA(Daily subsistence allowance)" />
+                    <GLAccount code="45017" name="Freight charges" />
+                    <GLAccount code="45018" name="Visitor expenses" />
+                    <GLAccount code="45019" name="Misc expenses" />
+                    <GLAccount code="45020" name="Internet Charges" />
+                    <GLAccount code="45021" name="Repairs And Maintenance Vehicle" />
+                    <GLAccount code="45026" name="Non-Insured Loan Write-off Acc" />
+                    <GLAccount code="45027" name="Training expenses" />
+                    <GLAccount code="45029" name="Staff welfare expense" />
+                    <GLAccount code="45030" name="Rates and taxes" />
+                    <GLAccount code="45031" name="Recruitment expenses" />
+                    <GLAccount code="45032" name="Member Welfare Expenses" />
+            </GLAccount>
+               <GLAccount code="41000" name="Direct Expenditure">
+                <GLAccount code="41100" name="Cost of Funds">
+                <GLAccount code="41101"  name="Interest on clients voluntary savings" />
+                <GLAccount code="41102" name="Interest on clients mandatory savings" />
+                
+                </GLAccount>
+                
+            </GLAccount>
+            
+            
+        </GLExpenditureAccount>
+    </ChartOfAccounts>
+</configuration>
+
