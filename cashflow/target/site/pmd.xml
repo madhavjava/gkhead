@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pmd version="4.2.2" timestamp="2013-11-25T12:09:11.945">
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/CashFlowConstants.java" suppressiontype="annotation" msg="Each class should declare at least one constructor" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/domain/MonthlyCashFlow.java" suppressiontype="annotation" msg="Document empty constructor" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/controller/CashFlowController.java" suppressiontype="annotation" msg="Avoid instantiating new objects inside loops" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/controller/CashFlowController.java" suppressiontype="annotation" msg="Avoid instantiating new objects inside loops" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/controller/CashFlowController.java" suppressiontype="annotation" msg="Avoid instantiating new objects inside loops" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/controller/CashFlowController.java" suppressiontype="annotation" msg="Avoid instantiating new objects inside loops" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/controller/CashFlowController.java" suppressiontype="annotation" msg="Avoid instantiating new objects inside loops" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/controller/CashFlowController.java" suppressiontype="annotation" msg="Avoid instantiating new objects inside loops" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/model/CashFlowForm.java" suppressiontype="annotation" msg="Document empty constructor" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/model/CashFlowForm.java" suppressiontype="annotation" msg="Avoid instantiating new objects inside loops" usermsg=""/>
+<suppressedviolation filename="/home/avinash/manoz/mifos-source/head/cashflow/src/main/java/org/mifos/platform/cashflow/ui/model/MonthlyCashFlowForm.java" suppressiontype="annotation" msg="Document empty constructor" usermsg=""/>
+</pmd>
