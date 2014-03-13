@@ -1,0 +1,867 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+    <changeSet id="MIFOS_3305_1" author="Jakub Slawinski" context="expansion">
+        <sql endDelimiter=";">
+                DROP TABLE IF EXISTS account_overpayment;
+                CREATE TABLE account_overpayment (
+                  overpayment_id integer auto_increment not null,
+                  account_id integer not null,
+                  payment_id integer not null,
+                  original_currency_id smallint,
+                  original_amount decimal(21,4) not null,
+                  actual_currency_id smallint,
+                  actual_amount decimal(21,4) not null,
+                  overpayment_status smallint not null,
+                  PRIMARY KEY (overpayment_id),
+                  foreign key(account_id)
+                    references account(account_id)
+                      on delete no action
+                      on update no action,
+                  foreign key(payment_id)
+                    references account_payment(payment_id)
+                      on delete no action
+                      on update no action,
+                  foreign key(original_currency_id)
+                    references currency(currency_id)
+                      on delete no action
+                      on update no action,
+                  foreign key(actual_currency_id)
+                    references currency(currency_id)
+                      on delete no action
+                      on update no action
+                ) ENGINE=InnoDB character set utf8;
+                  create index account_id_account_overpayment_idx on account_overpayment (account_id);
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                DROP TABLE IF EXISTS account_overpayment;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5359_1" author="Michal Dudzinski" context="expansion">
+    	<sql endDelimiter=";">
+    			ALTER TABLE personnel
+				ADD COLUMN site_preference smallint(3) AFTER preferred_locale;
+    	</sql>
+    	<rollback>
+    		<sql endDelimiter=";">
+    			ALTER TABLE personnel
+				DROP COLUMN site_preference;
+    		</sql>	
+    	</rollback>
+     </changeSet>
+     <changeSet id="MIFOS_5382_1" author="Lukasz Lewczynski" context="expansion">
+        <validCheckSum>3:8087265e7debf6021ee1f88472a900a8</validCheckSum>
+        <validCheckSum>3:a183f01f0b1e388722dc8a746207ceef</validCheckSum>
+        <sql endDelimiter=";">
+            SET @mifosfkname = (select CONSTRAINT_NAME from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+                                where REFERENCED_TABLE_NAME="penalty"
+                                and TABLE_NAME="loan_offering" and CONSTRAINT_SCHEMA=DATABASE());
+            SET @mifosquery = CONCAT("ALTER TABLE loan_offering DROP FOREIGN KEY ", @mifosfkname);
+            PREPARE stmt FROM @mifosquery;
+            EXECUTE stmt;
+            DEALLOCATE PREPARE stmt;
+
+            SET @mifosfkname = (select CONSTRAINT_NAME from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+                                where REFERENCED_TABLE_NAME="penalty"
+                                and TABLE_NAME="loan_penalty" and CONSTRAINT_SCHEMA=DATABASE());
+            SET @mifosquery = CONCAT("ALTER TABLE loan_penalty DROP FOREIGN KEY ", @mifosfkname);
+            PREPARE stmt FROM @mifosquery;
+            EXECUTE stmt;
+            DEALLOCATE PREPARE stmt;
+
+            DROP TABLE IF EXISTS penalty_category;
+            DROP TABLE IF EXISTS penalty_formula;
+            DROP TABLE IF EXISTS penalty_period;
+            DROP TABLE IF EXISTS penalty_frequency;
+            DROP TABLE IF EXISTS penalty;
+
+            CREATE TABLE penalty_category (
+              category_id SMALLINT AUTO_INCREMENT NOT NULL,
+              lookup_id INTEGER NOT NULL,
+              PRIMARY KEY (category_id),
+              FOREIGN KEY (lookup_id)
+                REFERENCES lookup_value(lookup_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+            
+            CREATE TABLE penalty_formula (
+              formula_id SMALLINT AUTO_INCREMENT NOT NULL,
+              lookup_id INTEGER NOT NULL,
+              PRIMARY KEY (formula_id),
+              FOREIGN KEY (lookup_id)
+                REFERENCES lookup_value(lookup_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+            
+            CREATE TABLE penalty_period (
+              period_id SMALLINT AUTO_INCREMENT NOT NULL,
+              lookup_id INTEGER NOT NULL,
+              PRIMARY KEY (period_id),
+              FOREIGN KEY (lookup_id)
+                REFERENCES lookup_value(lookup_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+            
+            CREATE TABLE penalty_frequency (
+              frequency_id SMALLINT AUTO_INCREMENT NOT NULL,
+              lookup_id INTEGER NOT NULL,
+              PRIMARY KEY (frequency_id),
+              FOREIGN KEY (lookup_id)
+                REFERENCES lookup_value(lookup_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+
+            CREATE TABLE penalty (
+              penalty_id SMALLINT NOT NULL AUTO_INCREMENT,
+              global_penalty_num VARCHAR(100) DEFAULT NULL,
+              penalty_name VARCHAR(100) NOT NULL,
+              category_id SMALLINT NOT NULL,
+              period_type_id SMALLINT NOT NULL,
+              period_duration INTEGER DEFAULT NULL,
+              limit_min INTEGER NOT NULL,
+              limit_max INTEGER NOT NULL,
+              amount DECIMAL(21,4) DEFAULT NULL,
+              amount_currency_id SMALLINT DEFAULT NULL,
+              rate DECIMAL(13,10) DEFAULT NULL,
+              formula_id SMALLINT DEFAULT NULL,
+              penalty_frequency_id SMALLINT NOT NULL,
+              glcode_id SMALLINT NOT NULL,
+              office_id SMALLINT DEFAULT NULL,
+              created_date DATE NOT NULL,
+              created_by SMALLINT NOT NULL,
+              updated_date DATE DEFAULT NULL,
+              updated_by SMALLINT DEFAULT NULL,
+              version_no INTEGER NOT NULL,
+              discriminator VARCHAR(20) NOT NULL,
+              PRIMARY KEY (penalty_id),
+              FOREIGN KEY (category_id)
+                REFERENCES penalty_category(category_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (glcode_id)
+                REFERENCES gl_code (glcode_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (period_type_id)
+                REFERENCES penalty_period(period_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (office_id)
+                REFERENCES office(office_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (amount_currency_id)
+                REFERENCES currency(currency_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (formula_id)
+                REFERENCES penalty_formula(formula_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (penalty_frequency_id)
+                REFERENCES penalty_frequency(frequency_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (created_by)
+                REFERENCES personnel(personnel_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (updated_by)
+                REFERENCES personnel(personnel_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+
+            ALTER TABLE loan_offering ADD CONSTRAINT loan_offering_penalty FOREIGN KEY (penalty_id) REFERENCES penalty(penalty_id) ON DELETE NO ACTION ON UPDATE NO ACTION;
+            ALTER TABLE loan_penalty ADD FOREIGN KEY(penalty_id) REFERENCES penalty(penalty_id) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+            INSERT INTO lookup_entity(entity_name, description) VALUES ('PenaltyCategory', 'This is mainly used in penalties to show the categories where this penalty is applicable');
+            INSERT INTO lookup_entity(entity_name, description) VALUES ('PenaltyFormula', 'PenaltyFormula');
+            INSERT INTO lookup_entity(entity_name, description) VALUES ('PenaltyPeriod', 'PenaltyPeriod');
+            INSERT INTO lookup_entity(entity_name, description) VALUES ('PenaltyFrequency', 'PenaltyFrequency');
+            
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyCategory-Loans' FROM lookup_entity WHERE entity_name LIKE 'PenaltyCategory';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyCategory-Savings' FROM lookup_entity WHERE entity_name LIKE 'PenaltyCategory';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyFormula-OutstandingPrincipalAmount' FROM lookup_entity WHERE entity_name LIKE 'PenaltyFormula';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyFormula-OutstandingLoanAmount' FROM lookup_entity WHERE entity_name LIKE 'PenaltyFormula';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyFormula-OverdueAmountDue' FROM lookup_entity WHERE entity_name LIKE 'PenaltyFormula';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyFormula-OverduePrincipal' FROM lookup_entity WHERE entity_name LIKE 'PenaltyFormula';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyPeriod-NumberOfInstallments' FROM lookup_entity WHERE entity_name LIKE 'PenaltyPeriod';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyPeriod-NumberOfDays' FROM lookup_entity WHERE entity_name LIKE 'PenaltyPeriod';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyFrequency-None' FROM lookup_entity WHERE entity_name LIKE 'PenaltyFrequency';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyFrequency-Daily' FROM lookup_entity WHERE entity_name LIKE 'PenaltyFrequency';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyFrequency-Weekly' FROM lookup_entity WHERE entity_name LIKE 'PenaltyFrequency';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyFrequency-Monthly' FROM lookup_entity WHERE entity_name LIKE 'PenaltyFrequency';
+
+            INSERT INTO lookup_label(entity_id, locale_id) SELECT entity_id, 1 FROM lookup_entity WHERE entity_name LIKE 'PenaltyCategory';
+            INSERT INTO lookup_label(entity_id, locale_id) SELECT entity_id, 1 FROM lookup_entity WHERE entity_name LIKE 'PenaltyFormula';
+            INSERT INTO lookup_label(entity_id, locale_id) SELECT entity_id, 1 FROM lookup_entity WHERE entity_name LIKE 'PenaltyPeriod';
+            INSERT INTO lookup_label(entity_id, locale_id) SELECT entity_id, 1 FROM lookup_entity WHERE entity_name LIKE 'PenaltyFrequency';
+
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyCategory-Loans';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyCategory-Savings';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFormula-OutstandingPrincipalAmount';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFormula-OutstandingLoanAmount';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFormula-OverdueAmountDue';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFormula-OverduePrincipal';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-NumberOfInstallments';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-NumberOfDays';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFrequency-None';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFrequency-Daily';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFrequency-Weekly';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFrequency-Monthly';
+            
+            INSERT INTO penalty_category(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyCategory-Loans';
+            INSERT INTO penalty_category(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyCategory-Savings';
+            
+            INSERT INTO penalty_formula(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFormula-OutstandingPrincipalAmount';
+            INSERT INTO penalty_formula(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFormula-OutstandingLoanAmount';
+            INSERT INTO penalty_formula(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFormula-OverdueAmountDue';
+            INSERT INTO penalty_formula(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFormula-OverduePrincipal';
+            
+            INSERT INTO penalty_period(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-NumberOfInstallments';
+            INSERT INTO penalty_period(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-NumberOfDays';
+            
+            INSERT INTO penalty_frequency(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFrequency-None';
+            INSERT INTO penalty_frequency(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFrequency-Daily';
+            INSERT INTO penalty_frequency(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFrequency-Weekly';
+            INSERT INTO penalty_frequency(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyFrequency-Monthly';
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                SET @mifosfkname = (select CONSTRAINT_NAME from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+                                    where REFERENCED_TABLE_NAME="penalty"
+                                    and TABLE_NAME="loan_offering" and CONSTRAINT_SCHEMA=DATABASE());
+                SET @mifosquery = CONCAT("ALTER TABLE loan_offering DROP FOREIGN KEY ", @mifosfkname);
+                PREPARE stmt FROM @mifosquery;
+                EXECUTE stmt;
+                DEALLOCATE PREPARE stmt;
+
+                SET @mifosfkname = (select CONSTRAINT_NAME from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+                                    where REFERENCED_TABLE_NAME="penalty"
+                                    and TABLE_NAME="loan_penalty" and CONSTRAINT_SCHEMA=DATABASE());
+                SET @mifosquery = CONCAT("ALTER TABLE loan_penalty DROP FOREIGN KEY ", @mifosfkname);
+                PREPARE stmt FROM @mifosquery;
+                EXECUTE stmt;
+                DEALLOCATE PREPARE stmt;
+
+                DROP TABLE IF EXISTS penalty;
+
+                CREATE TABLE penalty (
+                  penalty_id SMALLINT NOT NULL,
+                  global_penalty_num VARCHAR(100),
+                  penalty_type VARCHAR(100),
+                  office_id SMALLINT,
+                  category_id SMALLINT,
+                  glcode_id SMALLINT NOT NULL,
+                  lookup_id INTEGER,
+                  rate DECIMAL(13, 10) NOT NULL,
+                  formula VARCHAR(100),
+                  PRIMARY KEY (penalty_id),
+                  FOREIGN KEY (category_id)
+                    REFERENCES category_type(category_id)
+                      ON DELETE NO ACTION
+                      ON UPDATE NO ACTION,
+                  FOREIGN KEY (glcode_id)
+                    REFERENCES gl_code(glcode_id)
+                      ON DELETE NO ACTION
+                      ON UPDATE NO ACTION,
+                  FOREIGN KEY (lookup_id)
+                    REFERENCES lookup_value(lookup_id)
+                      ON DELETE NO ACTION
+                      ON UPDATE NO ACTION,
+                  FOREIGN KEY (office_id)
+                    REFERENCES office(office_id)
+                      ON DELETE NO ACTION
+                      ON UPDATE NO ACTION
+                ) ENGINE=InnoDB CHARACTER SET utf8;
+
+                ALTER TABLE loan_offering ADD CONSTRAINT loan_offering_penalty FOREIGN KEY (penalty_id) REFERENCES penalty(penalty_id) ON DELETE NO ACTION ON UPDATE NO ACTION;
+                ALTER TABLE loan_penalty ADD FOREIGN KEY(penalty_id) REFERENCES penalty(penalty_id) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+                TRUNCATE TABLE penalty_category;
+                TRUNCATE TABLE penalty_formula;
+                TRUNCATE TABLE penalty_period;
+                TRUNCATE TABLE penalty_frequency;
+                
+                DELETE vl
+                FROM lookup_entity AS e, lookup_label AS l, lookup_value AS v, lookup_value_locale AS vl
+                WHERE l.entity_id=e.entity_id AND v.entity_id=e.entity_id AND vl.lookup_id=v.lookup_id AND e.entity_name REGEXP 'Penalty*';
+
+                DELETE v
+                FROM lookup_entity AS e, lookup_label AS l, lookup_value AS v
+                WHERE l.entity_id=e.entity_id AND v.entity_id=e.entity_id AND e.entity_name REGEXP 'Penalty*';
+
+                DELETE l
+                FROM lookup_entity AS e, lookup_label AS l
+                WHERE l.entity_id=e.entity_id AND e.entity_name REGEXP 'Penalty*';
+
+                DELETE e
+                FROM lookup_entity AS e
+                WHERE e.entity_name REGEXP 'Penalty*';
+                
+                DROP TABLE IF EXISTS penalty_category;
+                DROP TABLE IF EXISTS penalty_formula;
+                DROP TABLE IF EXISTS penalty_period;
+                DROP TABLE IF EXISTS penalty_frequency;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5382_2" author="Lukasz Lewczynski" context="expansion">
+        <validCheckSum>3:864b0fd522895b0aa7142d936ddc4bc4</validCheckSum>
+        <validCheckSum>3:0b107061b9962b9a37de7789bf491e1b</validCheckSum>
+        <sql endDelimiter=";">
+            DROP TABLE IF EXISTS penalty_status;
+        
+            CREATE TABLE penalty_status (
+              status_id SMALLINT AUTO_INCREMENT NOT NULL,
+              lookup_id INTEGER NOT NULL,
+              PRIMARY KEY (status_id),
+              FOREIGN KEY (lookup_id)
+                REFERENCES lookup_value(lookup_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+            
+            ALTER TABLE penalty ADD COLUMN status_id SMALLINT NOT NULL AFTER penalty_frequency_id;
+
+            ALTER TABLE penalty ADD FOREIGN KEY (status_id) REFERENCES penalty_status(status_id) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+            INSERT INTO lookup_entity(entity_name, description) VALUES ('PenaltyStatus', 'PenaltyStatus');
+            
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyStatus-Active' FROM lookup_entity WHERE entity_name LIKE 'PenaltyStatus';
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyStatus-InActive' FROM lookup_entity WHERE entity_name LIKE 'PenaltyStatus';
+
+            INSERT INTO lookup_label(entity_id, locale_id) SELECT entity_id, 1 FROM lookup_entity WHERE entity_name LIKE 'PenaltyStatus';
+
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyStatus-Active';
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyStatus-InActive';
+            
+            INSERT INTO penalty_status(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyStatus-Active';
+            INSERT INTO penalty_status(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyStatus-InActive';
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                SET @mifosfkname = (select CONSTRAINT_NAME from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+                                    where REFERENCED_TABLE_NAME="penalty_status"
+                                    and TABLE_NAME="penalty" and CONSTRAINT_SCHEMA=DATABASE());
+                SET @mifosquery = CONCAT("ALTER TABLE penalty DROP FOREIGN KEY ", @mifosfkname);
+                PREPARE stmt FROM @mifosquery;
+                EXECUTE stmt;
+                DEALLOCATE PREPARE stmt;
+
+                ALTER TABLE penalty DROP COLUMN status_id;
+
+                TRUNCATE TABLE penalty_status;
+                
+                DELETE vl
+                FROM lookup_entity AS e, lookup_label AS l, lookup_value AS v, lookup_value_locale AS vl
+                WHERE l.entity_id=e.entity_id AND v.entity_id=e.entity_id AND vl.lookup_id=v.lookup_id AND e.entity_name LIKE 'PenaltyStatus';
+
+                DELETE v
+                FROM lookup_entity AS e, lookup_label AS l, lookup_value AS v
+                WHERE l.entity_id=e.entity_id AND v.entity_id=e.entity_id AND e.entity_name LIKE 'PenaltyStatus';
+
+                DELETE l
+                FROM lookup_entity AS e, lookup_label AS l
+                WHERE l.entity_id=e.entity_id AND e.entity_name LIKE 'PenaltyStatus';
+
+                DELETE e
+                FROM lookup_entity AS e
+                WHERE e.entity_name LIKE 'PenaltyStatus';
+                
+                DROP TABLE IF EXISTS penalty_status;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS-5371_1" author="Jakub Slawinski" context="expansion">
+        <addColumn tableName="loan_offering">
+            <column name="fixed_repayment_flag" type="smallint" defaultValue="0"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="loan_offering" columnName="fixed_repayment_flag"/>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5383_1" author="Lukasz Lewczynski" context="expansion">
+        <validCheckSum>3:e3f2fdea6e47675516523f634130672c</validCheckSum>
+        <validCheckSum>3:7c9d1c1a7bb13e207a78cc7445c70c6a</validCheckSum>
+        <sql endDelimiter=";">
+            DROP TABLE IF EXISTS prd_offering_penalties;
+        
+            CREATE TABLE prd_offering_penalties (
+                prd_offering_penalty_id SMALLINT AUTO_INCREMENT NOT NULL,
+                penalty_id SMALLINT,
+                prd_offering_id SMALLINT,
+                PRIMARY KEY (prd_offering_penalty_id),
+                FOREIGN KEY(penalty_id)
+                  REFERENCES penalty(penalty_id)
+                    ON DELETE NO ACTION
+                    ON UPDATE NO ACTION,
+                FOREIGN KEY(prd_offering_id)
+                  REFERENCES prd_offering(prd_offering_id)
+                    ON DELETE NO ACTION
+                    ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                DROP TABLE IF EXISTS prd_offering_penalties;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5425_1" author="Lukasz Lewczynski" context="expansion">
+        <validCheckSum>3:b28cb3448b7729cfbea082f33eeca853</validCheckSum>
+        <validCheckSum>3:1aa3923178b3456b26c53cb0c57bd70e</validCheckSum>
+        <sql endDelimiter=";">
+            DROP TABLE IF EXISTS account_penalties;
+        
+            CREATE TABLE account_penalties (
+              account_penalty_id INTEGER AUTO_INCREMENT NOT NULL,
+              account_id INTEGER NOT NULL,
+              penalty_id SMALLINT NOT NULL,
+              account_penalty_amnt DECIMAL(21,4) NOT NULL,
+              account_penalty_amnt_currency_id SMALLINT,
+              penalty_amnt DECIMAL(21,4) NOT NULL,
+              penalty_status SMALLINT,
+              status_change_date DATE,
+              version_no INTEGER NOT NULL,
+              last_applied_date DATE,
+              PRIMARY KEY (account_penalty_id),
+              FOREIGN KEY (account_id)
+                REFERENCES account(account_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (penalty_id)
+                REFERENCES penalty(penalty_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (account_penalty_amnt_currency_id)
+                REFERENCES currency(currency_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+            
+            CREATE INDEX account_penalties_id_idx ON account_penalties (account_id, penalty_id);
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                DROP TABLE IF EXISTS account_penalties;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5433_1" author="Lukasz Lewczynski" context="expansion">
+        <validCheckSum>3:b32077bdab52d6cb9a4337ee44105586</validCheckSum>
+        <validCheckSum>3:10e6ff674b5557a5e219d515f7b49c58</validCheckSum>
+        <sql endDelimiter=";">
+            SET @mifosfkname = (select CONSTRAINT_NAME from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+                                where REFERENCED_TABLE_NAME="penalty_period"
+                                and TABLE_NAME="penalty" and CONSTRAINT_SCHEMA=DATABASE());
+            SET @mifosquery = CONCAT("ALTER TABLE penalty DROP FOREIGN KEY ", @mifosfkname);
+            PREPARE stmt FROM @mifosquery;
+            EXECUTE stmt;
+            DEALLOCATE PREPARE stmt;
+
+            ALTER TABLE penalty CHANGE COLUMN period_type_id period_type_id SMALLINT(6) NULL DEFAULT NULL;
+            ALTER TABLE penalty ADD FOREIGN KEY (period_type_id) REFERENCES penalty_period(period_id) ON DELETE NO ACTION ON UPDATE NO ACTION;
+        
+            INSERT INTO lookup_value(entity_id, lookup_name) SELECT entity_id, 'PenaltyPeriod-None' FROM lookup_entity WHERE entity_name LIKE 'PenaltyPeriod';
+
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) SELECT 1, lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-None';
+            
+            INSERT INTO penalty_period(lookup_id) SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-None';
+        </sql>
+         <rollback>
+            <sql endDelimiter=";">
+                SET @mifosfkname = (select CONSTRAINT_NAME from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+                                    where REFERENCED_TABLE_NAME="penalty_period"
+                                    and TABLE_NAME="penalty" and CONSTRAINT_SCHEMA=DATABASE());
+                SET @mifosquery = CONCAT("ALTER TABLE penalty DROP FOREIGN KEY ", @mifosfkname);
+                PREPARE stmt FROM @mifosquery;
+                EXECUTE stmt;
+                DEALLOCATE PREPARE stmt;
+
+                ALTER TABLE penalty CHANGE COLUMN period_type_id period_type_id SMALLINT(6) NOT NULL;
+                ALTER TABLE penalty ADD FOREIGN KEY (period_type_id) REFERENCES penalty_period (period_id) ON DELETE NO ACTION ON UPDATE NO ACTION;
+                
+                DELETE p
+                FROM penalty p, penalty_period pp, lookup_value lv
+                WHERE p.period_type_id = pp.period_id AND pp.lookup_id = lv.lookup_id AND lv.lookup_name LIKE 'PenaltyPeriod-None';
+                
+                DELETE FROM lookup_value_locale WHERE lookup_id IN (SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-None');
+            
+                DELETE FROM penalty_period WHERE lookup_id IN (SELECT lookup_id FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-None');
+                
+                DELETE FROM lookup_value WHERE lookup_name LIKE 'PenaltyPeriod-None';
+            </sql>
+         </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5370_1" author="Jakub Slawinski" context="expansion">
+        <sql endDelimiter=";">
+            insert into lookup_value(lookup_id,entity_id,lookup_name)
+                values((select max(lv.lookup_id)+1 from lookup_value lv),87,'Permissions-CanSetMonthClosingDate');
+            insert into lookup_value_locale(locale_id, lookup_id, lookup_value)
+                values(1,
+                (select lookup_id from lookup_value where entity_id =87 and
+                lookup_name='Permissions-CanSetMonthClosingDate'), null);
+            insert into activity(activity_id,parent_id,activity_name_lookup_id,description_lookup_id) values
+                (248,1,
+                (select lookup_id from lookup_value where entity_id =87 and lookup_name='Permissions-CanSetMonthClosingDate'),
+                (select lookup_id from lookup_value where entity_id =87 and lookup_name='Permissions-CanSetMonthClosingDate'));
+            insert into roles_activity values (248,1);
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                delete from roles_activity where activity_id = 248;
+                delete from activity where activity_id = 248;
+                delete from lookup_value_locale where lookup_id =
+                    (select lookup_id from lookup_value where lookup_name='Permissions-CanSetMonthClosingDate');
+                delete from lookup_value where entity_id = 87 and lookup_name = 'Permissions-CanSetMonthClosingDate';
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5370_2" author="Jakub Slawinski" context="expansion">
+        <sql endDelimiter=";">
+            create table config_key_value (
+                configuration_id integer auto_increment not null,
+                configuration_type smallint not null,
+                configuration_key varchar(100) not null,
+                configuration_value varchar(200) not null,
+                primary key(configuration_id),
+                unique (configuration_key)
+            )
+            engine = innodb character set utf8;
+
+            insert into config_key_value (configuration_key, configuration_type, configuration_value)
+                select configuration_key, 0, configuration_value from config_key_value_integer;
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                DROP TABLE IF EXISTS config_key_value;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5370_3" author="Jakub Slawinski" context="contraction">
+        <sql endDelimiter=";">
+            DROP TABLE IF EXISTS config_key_value_integer;
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                create table config_key_value_integer (
+                    configuration_id integer auto_increment not null,
+                    configuration_key varchar(100) not null,
+                    configuration_value integer not null,
+                    primary key(configuration_id),
+                    unique (configuration_key)
+                )
+                engine = innodb character set utf8;
+
+                insert into config_key_value_integer(configuration_key, configuration_value) values
+                    ('x',0),
+                    (' ',0),
+                    ('jasperReportIsHidden',1),
+                    ('loanIndividualMonitoringIsEnabled',0),
+                    ('repaymentSchedulesIndependentOfMeetingIsEnabled',0),
+                    ('CenterHierarchyExists',1),
+                    ('ClientCanExistOutsideGroup',0),
+                    ('GroupCanApplyLoans',0),
+                    ('minDaysBetweenDisbursalAndFirstRepaymentDay',1),
+                    ('maxDaysBetweenDisbursalAndFirstRepaymentDay',365),
+                    ('AdministrativeDocumentsIsEnabled',1),
+                    ('MIFOS-4948', 1);
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5426_1" author="Lukasz Lewczynski" context="expansion">
+        <sql endDelimiter=";">
+            ALTER TABLE account_penalties ADD COLUMN cal_count INT NOT NULL DEFAULT 0 AFTER penalty_amnt;
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                ALTER TABLE account_penalties DROP COLUMN cal_count;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5426_2" author="Lukasz Lewczynski" context="expansion">
+        <sql endDelimiter=";">
+            ALTER TABLE penalty CHANGE COLUMN limit_min limit_min DECIMAL(21,4) NOT NULL;
+            ALTER TABLE penalty CHANGE COLUMN limit_max limit_max DECIMAL(21,4) NOT NULL;
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                update penalty set limit_min = 2147483647 where limit_min > 2147483647;
+                update penalty set limit_max = 2147483647 where limit_max > 2147483647;
+                ALTER TABLE penalty CHANGE COLUMN limit_min limit_min INT NOT NULL;
+                ALTER TABLE penalty CHANGE COLUMN limit_max limit_max INT NOT NULL;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5426_3" author="Lukasz Lewczynski" context="expansion">
+        <validCheckSum>3:1ba3e60d6e8916c9814bf2befd5eb460</validCheckSum>
+        <validCheckSum>3:b8329e59d7d6264f58b8dea19728b63b</validCheckSum>
+        <sql endDelimiter=";">
+            DROP TABLE IF EXISTS loan_penalty_schedule;
+        
+            CREATE TABLE loan_penalty_schedule (
+              loan_penalties_schedule_id INTEGER AUTO_INCREMENT NOT NULL,
+              id INTEGER NOT NULL,
+              installment_id INTEGER NOT NULL,
+              penalty_id SMALLINT NOT NULL,
+              account_penalty_id INTEGER NOT NULL,
+              amount DECIMAL(21,4),
+              amount_currency_id SMALLINT,
+              amount_paid DECIMAL(21,4) NOT NULL,
+              amount_paid_currency_id SMALLINT NOT NULL,
+              version_no INTEGER NOT NULL,
+              PRIMARY KEY (loan_penalties_schedule_id),
+              FOREIGN KEY (id)
+                REFERENCES loan_schedule(id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (amount_currency_id)
+                REFERENCES currency(currency_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (amount_paid_currency_id)
+                REFERENCES currency(currency_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (penalty_id)
+                REFERENCES penalty(penalty_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (account_penalty_id)
+                REFERENCES account_penalties(account_penalty_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+        </sql>
+        <rollback>
+            <dropTable tableName="loan_penalty_schedule"/>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5446_1" author="Pawel Gesek" context="expansion">
+        <validCheckSum>3:da9b46d48c36748f47566fc805e67bc8</validCheckSum>
+        <validCheckSum>3:56b1b0c2fe51fed7133033cb3e797ad8</validCheckSum>
+        <sql endDelimiter=";">
+            SET @mifosfkname = (select CONSTRAINT_NAME from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+                                where REFERENCED_TABLE_NAME="customer"
+                                and TABLE_NAME="customer_picture" and CONSTRAINT_SCHEMA=DATABASE());
+            SET @mifosquery = CONCAT("ALTER TABLE customer_picture DROP FOREIGN KEY ", @mifosfkname);
+            PREPARE stmt FROM @mifosquery;
+            EXECUTE stmt;
+            DEALLOCATE PREPARE stmt;
+        
+            ALTER TABLE image_info ADD COLUMN customer_picture_entity INTEGER REFERENCES customer_picture;
+            ALTER TABLE image_info MODIFY COLUMN path varchar(255) NULL DEFAULT NULL;
+            ALTER TABLE customer_picture DROP COLUMN customer_id;
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                ALTER TABLE image_info DROP COLUMN customer_picture_entity;
+                ALTER TABLE image_info MODIFY COLUMN path varchar(255) NOT NULL;
+                TRUNCATE TABLE customer_picture;
+                ALTER TABLE customer_picture 
+                    ADD COLUMN customer_id INTEGER NOT NULL,
+                    ADD FOREIGN KEY (customer_id) REFERENCES customer(customer_id);
+            </sql>
+        </rollback>
+    </changeSet>
+        <changeSet id="MIFOS_5426_4" author="Lukasz Lewczynski" context="expansion">
+        <sql endDelimiter=";">
+            ALTER TABLE loan_penalty_schedule ADD COLUMN last_applied DATE NOT NULL AFTER amount_paid_currency_id;
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                ALTER TABLE loan_penalty_schedule DROP COLUMN last_applied;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5387_1" author="Lukasz Lewczynski" context="expansion">
+        <sql endDelimiter=";">
+            INSERT INTO lookup_value(lookup_id, entity_id, lookup_name) VALUES
+                ((SELECT max(lv.lookup_id)+1 FROM lookup_value lv), 87, 'Permissions-CanRemovePenaltyAttachedToTheLoanAccount');
+            
+            INSERT INTO lookup_value_locale(locale_id, lookup_id, lookup_value) VALUES
+                (1,
+                (SELECT lookup_id FROM lookup_value WHERE entity_id=87 AND lookup_name='Permissions-CanRemovePenaltyAttachedToTheLoanAccount'), null);
+                
+            INSERT INTO activity(activity_id, parent_id, activity_name_lookup_id, description_lookup_id) VALUES
+                (249, 113,
+                (SELECT lookup_id FROM lookup_value WHERE entity_id=87 AND lookup_name='Permissions-CanRemovePenaltyAttachedToTheLoanAccount'),
+                (SELECT lookup_id FROM lookup_value WHERE entity_id=87 AND lookup_name='Permissions-CanRemovePenaltyAttachedToTheLoanAccount'));
+                
+            INSERT INTO roles_activity VALUES
+                (249, 1);
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                DELETE FROM roles_activity WHERE activity_id = 249;
+                DELETE FROM activity WHERE activity_id = 249;
+                DELETE FROM lookup_value_locale where lookup_id =
+                    (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanRemovePenaltyAttachedToTheLoanAccount');
+                DELETE FROM lookup_value WHERE entity_id = 87 AND lookup_name = 'Permissions-CanRemovePenaltyAttachedToTheLoanAccount';
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5394_1" author="Pawel Gesek" context="expansion">
+        <sql endDelimiter=";">
+            insert into lookup_value(lookup_id,entity_id,lookup_name) values((select max(lv.lookup_id)+1 from
+                lookup_value lv), 87, 'Permissions-CanImportClients');
+
+            insert into lookup_value_locale(locale_id,lookup_id,lookup_value) values
+            (1,(select lookup_id from lookup_value where entity_id =87 and
+                lookup_name='Permissions-CanImportClients'),null);
+
+            insert into activity(activity_id,parent_id, activity_name_lookup_id, DESCRIPTION_lookup_id) 
+            values(250,196,(select lookup_id from lookup_value where entity_id =87 and
+                lookup_name='Permissions-CanImportClients'),
+                (select lookup_id from lookup_value where entity_id =87 and
+                lookup_name='Permissions-CanImportClients'));
+
+            insert into roles_activity(activity_id, role_id) values(250, 1);
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                delete from roles_activity where activity_id = 250;
+
+                delete from activity where activity_id = 250;
+
+                delete from lookup_value_locale where lookup_id =
+                    (select lookup_id from lookup_value
+                    where lookup_name='Permissions-CanImportClients');
+
+                delete from lookup_value where entity_id = 87 and lookup_name =
+                    'Permissions-CanImportClients';
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5450_1" author="Lukasz Lewczynski" context="expansion">
+        <sql endDelimiter=";">
+            INSERT INTO lookup_value(entity_id, lookup_name) VALUES (87, 'Permissions-Penalties');
+            INSERT INTO lookup_value(entity_id, lookup_name) VALUES (87, 'Permissions-CanDefineNewPenaltyType');
+            INSERT INTO lookup_value(entity_id, lookup_name) VALUES (87, 'Permissions-CanModifyPenaltyInformation');
+
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) VALUES
+                (1, (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-Penalties'));
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) VALUES
+                (1, (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanDefineNewPenaltyType'));
+            INSERT INTO lookup_value_locale(locale_id, lookup_id) VALUES
+                (1, (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanModifyPenaltyInformation'));
+
+            INSERT INTO activity(activity_id, parent_id, activity_name_lookup_id, description_lookup_id) VALUES
+                (251, 1,
+                (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-Penalties'),
+                (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-Penalties'));
+            INSERT INTO activity(activity_id, parent_id, activity_name_lookup_id, description_lookup_id) VALUES
+                (252, 251,
+                (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanDefineNewPenaltyType'),
+                (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanDefineNewPenaltyType'));
+            INSERT INTO activity(activity_id, parent_id, activity_name_lookup_id, description_lookup_id) VALUES
+                (253, 251,
+                (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanModifyPenaltyInformation'),
+                (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanModifyPenaltyInformation'));
+
+            INSERT INTO roles_activity(activity_id, role_id) VALUES (251, 1);
+            INSERT INTO roles_activity(activity_id, role_id) VALUES (252, 1);
+            INSERT INTO roles_activity(activity_id, role_id) VALUES (253, 1);
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                DELETE FROM roles_activity WHERE activity_id = 253;
+                DELETE FROM roles_activity WHERE activity_id = 252;
+                DELETE FROM roles_activity WHERE activity_id = 251;
+
+                DELETE FROM activity WHERE activity_id = 253;
+                DELETE FROM activity WHERE activity_id = 252;
+                DELETE FROM activity WHERE activity_id = 251;
+
+                DELETE FROM lookup_value_locale
+                WHERE lookup_id = (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-Penalties');
+
+                DELETE FROM lookup_value_locale
+                WHERE lookup_id = (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanDefineNewPenaltyType');
+
+                DELETE FROM lookup_value_locale
+                WHERE lookup_id = (SELECT lookup_id FROM lookup_value WHERE lookup_name='Permissions-CanModifyPenaltyInformation');
+
+                DELETE FROM lookup_value
+                WHERE entity_id = 87 AND lookup_name = 'Permissions-Penalties';
+
+                DELETE FROM lookup_value
+                WHERE entity_id = 87 AND lookup_name = 'Permissions-CanDefineNewPenaltyType';
+
+                DELETE FROM lookup_value
+                WHERE entity_id = 87 AND lookup_name = 'Permissions-CanModifyPenaltyInformation';
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5193" author="Hugo Technologies" context="expansion">
+        <sql endDelimiter=";">
+            Insert into config_key_value(configuration_type,configuration_key, configuration_value) values (0,'prorate_Rule',0);
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                Delete from config_key_value where configuration_key='prorate_Rule';
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5458_1" author="Lukasz Lewczynski" context="expansion">
+        <sql endDelimiter=";">
+            DROP TABLE IF EXISTS penalty_trxn_detail;
+            
+            CREATE TABLE penalty_trxn_detail (
+              penalty_trxn_detail_id INTEGER AUTO_INCREMENT NOT NULL,
+              account_trxn_id INTEGER NOT NULL,
+              account_penalty_id INTEGER,
+              penalty_amount_currency_id SMALLINT,
+              penalty_amount DECIMAl(21,4) NOT NULL,
+              PRIMARY KEY (penalty_trxn_detail_id),
+              FOREIGN KEY (account_penalty_id)
+                REFERENCES account_penalties(account_penalty_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION,
+              FOREIGN KEY (penalty_amount_currency_id)
+                REFERENCES currency(currency_id)
+                    ON DELETE NO ACTION
+                    ON UPDATE NO ACTION,
+              FOREIGN KEY (account_trxn_id)
+                REFERENCES account_trxn(account_trxn_id)
+                  ON DELETE NO ACTION
+                  ON UPDATE NO ACTION
+            ) ENGINE=InnoDB CHARACTER SET utf8;
+            
+            CREATE INDEX penalty_account_trxn_idx ON penalty_trxn_detail (account_trxn_id);
+        </sql>
+        <rollback>
+            <dropTable tableName="penalty_trxn_detail"/>
+        </rollback>
+    </changeSet>
+    <changeSet id="MIFOS_5521_1" author="Lukasz Lewczynski" context="expansion">
+        <sql endDelimiter=";">
+            ALTER TABLE account_penalties ADD COLUMN created_date DATE;
+            
+            UPDATE account_penalties ap
+            LEFT JOIN loan_account la
+            ON (la.account_id = ap.account_id)
+            SET ap.created_date = la.disbursement_date
+            WHERE ap.last_applied_date IS NOT NULL;
+            
+            UPDATE account_penalties
+            SET created_date = CURRENT_DATE
+            WHERE last_applied_date IS NULL;
+        </sql>
+        <rollback>
+            <sql endDelimiter=";">
+                ALTER TABLE account_penalties DROP COLUMN created_date;
+            </sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
